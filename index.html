@@ -2,6 +2,8 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self' data: blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <title>学习工作台</title>
 <meta name="description" content="计划、笔记、卡片复习、番茄钟、统计、教材导入、AI 出卷、错题本——一站式学习工作台">
@@ -50,6 +52,7 @@
 <script src="js/focus.js" defer></script>
 <script src="js/ai.js" defer></script>
 <script src="js/books.js" defer></script>
+<script src="js/tt.js" defer></script>
 <script src="js/exam.js" defer></script>
 <script src="js/wrong.js" defer></script>
 <script src="js/analysis.js" defer></script>

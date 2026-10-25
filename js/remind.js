@@ -46,8 +46,9 @@ const Remind = {
   },
   init() {
     this.update(); setTimeout(() => this.check(), 1500);
-    setInterval(() => { this.check(); this.update(); }, 60000);
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { this.update(); this.check(); } });
+    const tt = () => { try { TT.checkReminders(); } catch (e) { } }; setTimeout(tt, 2000);
+    setInterval(() => { this.check(); this.update(); tt(); }, 60000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { this.update(); this.check(); tt(); } });
   },
   // 生成 iCalendar 文件：每天固定时间重复的提醒事件（浮动本地时间，带闹钟）
   ics() {
@@ -61,13 +62,13 @@ const Remind = {
     if (r.evening) evs.push(ev('evening', r.evening, '🌙 学习工作台 · 晚间复习', '睡前 15 分钟：复习到期卡片 + 回顾错题，记忆更牢。'));
     return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//study-workbench//CN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:学习工作台提醒', ...evs, 'END:VCALENDAR'].join('\r\n') + '\r\n';
   },
-  async exportIcs() {
-    const name = '学习工作台-复习提醒.ics'; const blob = new Blob([this.ics()], { type: 'text/calendar;charset=utf-8' });
-    const file = new File([blob], name, { type: 'text/calendar' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    // iOS Safari 直接打开 .ics 会弹出「添加到日历」；其他平台下载文件后双击导入
-    if (!isIOS()) a.download = name; else a.target = '_blank';
-    void file; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
-    toast(isIOS() ? '在弹出的日历预览中点「添加全部」' : '已下载日历文件：打开后导入即可');
-  }
+  exportIcs() { downloadIcs(this.ics(), '学习工作台-复习提醒.ics'); }
 };
+// 下载 / 打开 .ics：iOS Safari 直接打开会弹出「添加到日历」；其他平台下载后导入
+function downloadIcs(text, name) {
+  const blob = new Blob([text], { type: 'text/calendar;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  if (!isIOS()) a.download = name; else a.target = '_blank';
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+  toast(isIOS() ? '在弹出的日历预览中点「添加」' : '已下载日历文件：打开后导入即可');
+}

@@ -58,4 +58,4 @@ function emptyState(ic, title, desc = '', actions = '') {
   return `<div class="empty-state es7">${Game.vn({ mood, layout: 'stack', title: esc(title), text: desc, art: 124, cap: 'ひとこと' })}${act}</div>`;
 }
 // 彩色图标块（tile / 列表用）
-function iconTile(name, color, size = 20) { return `<span class="ic-tile" style="--c:${color}">${icon(name, size)}</span>`; }
+function iconTile(name, color, size = 20) { return `<span class="ic-tile" style="--c:${safeColor(color, 'var(--pri)')}">${icon(name, size)}</span>`; }

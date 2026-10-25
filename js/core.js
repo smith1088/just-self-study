@@ -36,7 +36,7 @@ const DB = {
   set(k, v) { return new Promise((res, rej) => { const tx = this.db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); },
   clear() { return new Promise((res) => { const tx = this.db.transaction('kv', 'readwrite'); tx.objectStore('kv').clear(); tx.oncomplete = () => res(); }); }
 };
-const COLLECTIONS = ['todos', 'notes', 'decks', 'cards', 'reviews', 'sessions', 'books', 'exams', 'wrongs', 'solves', 'banks'];
+const COLLECTIONS = ['todos', 'notes', 'decks', 'cards', 'reviews', 'sessions', 'books', 'exams', 'wrongs', 'solves', 'banks', 'courses', 'events'];
 const DEFAULT_SETTINGS = {
   theme: 'auto',
   subjects: [
@@ -50,6 +50,7 @@ const DEFAULT_SETTINGS = {
   tts: { rate: 1, autoplay: false, autoBack: true, enVoice: '', zhVoice: '' },
   remind: { enabled: true, morning: '08:00', evening: '21:00', notify: true },
   ai: { preset: 'deepseek', baseUrl: 'https://api.deepseek.com', apiKey: '', model: 'deepseek-chat', visionModel: '', jsonMode: true, maxChars: 12000 },
+  tt: { start: '', periods: [] },
   name: ''
 };
 const S = { settings: null }; COLLECTIONS.forEach(c => S[c] = []);
@@ -70,7 +71,9 @@ async function loadAll() {
 }
 function deepMerge(a, b) { for (const k in b) { if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k]) && a[k] && typeof a[k] === 'object') deepMerge(a[k], b[k]); else a[k] = b[k]; } return a; }
 function saveSettings() { DB.set('settings', S.settings); }
-function subj(id) { return S.settings.subjects.find(s => s.id === id) || { id: '', name: '未分类', color: '#8e8e93' }; }
+// 颜色值会被拼进 style 属性：只允许 #hex / var(--x) / rgb()/hsl() 数字形式，防止导入的数据注入 HTML
+const safeColor = (c, d = '#8e8e93') => /^(#[0-9a-f]{3,8}|var\(--[a-z0-9-]+\)|(rgb|hsl)a?\([0-9., %]+\))$/i.test(String(c ?? '').trim()) ? String(c).trim() : d;
+function subj(id) { const s = S.settings.subjects.find(s => s.id === id); return s ? (s.color === safeColor(s.color) ? s : { ...s, color: safeColor(s.color) }) : { id: '', name: '未分类', color: '#8e8e93' }; }
 function subjChip(id) { if (!id) return ''; const s = subj(id); return `<span class="chip"><span class="dot" style="background:${s.color}"></span>${esc(s.name)}</span>`; }
 function subjOptions(sel, allowEmpty = true) { return (allowEmpty ? `<option value="">未分类</option>` : '') + S.settings.subjects.map(s => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${esc(s.name)}</option>`).join(''); }
 
@@ -83,6 +86,11 @@ function loading(on, text = '处理中…', abortCtl = null) {
   _loadingAbort = abortCtl; $('#loadingCancel').classList.toggle('hidden', !abortCtl);
 }
 let _sheetOnClose = null;
+// 代替内联 onclick（CSP 禁止内联脚本）
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-close-sheet]')) closeSheet();
+  if (e.target.closest('[data-reset-types]') && typeof examDraft !== 'undefined') examDraft.types = { single: 0, multiple: 0, judge: 0, blank: 0, short: 0, calc: 0 };
+});
 function openSheet(html, onMount, onClose) {
   if (_sheetOnClose) { const f = _sheetOnClose; _sheetOnClose = null; }
   const sh = $('#sheet'); $('#sheetBody').innerHTML = html; sh.classList.remove('hidden'); _sheetOnClose = onClose || null;
@@ -155,7 +163,7 @@ function mdRaw(src) {
     .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<i>$2</i>')
     .replace(/==([^=]+)==/g, '<mark>$1</mark>')
     .replace(/~~([^~]+)~~/g, '<s>$1</s>')
-    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
   const flushP = () => { if (para.length) { out += '<p>' + para.map(inline).join('<br>') + '</p>'; para = []; } };
   const flushL = () => { if (list) { out += `</${list}>`; list = null; } };
   for (const l of lines) {

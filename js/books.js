@@ -14,11 +14,12 @@ const Books = {
   async readPdf(file, progress, signal) {
     const lib = await this.loadPdfJs();
     const buf = await readFileAs(file, 'buffer');
-    const pdf = await lib.getDocument({ data: buf, cMapUrl: 'vendor/cmaps/', cMapPacked: true, standardFontDataUrl: 'vendor/standard_fonts/' }).promise;
+    const pdf = await lib.getDocument({ data: buf, cMapUrl: 'vendor/cmaps/', cMapPacked: true, isEvalSupported: false, standardFontDataUrl: 'vendor/standard_fonts/' }).promise;
     const pages = [];
     for (let i = 1; i <= pdf.numPages; i++) {
       if (signal?.aborted) throw new AIError('已取消', 'abort');
-      progress && progress(`正在解析 PDF 第 ${i}/${pdf.numPages} 页…`);
+      progress && progress(`正在解析 PDF 第 ${i}/${pdf.numPages} 页 · ${Math.round(i / pdf.numPages * 100)}%`);
+      if (i % 4 === 0) await new Promise(r => setTimeout(r, 0)); // 分批让出主线程，大 PDF 不卡界面
       const page = await pdf.getPage(i); const tc = await page.getTextContent();
       let s = '', lastY = null;
       for (const it of tc.items) {
@@ -27,6 +28,7 @@ const Books = {
         if (lastY !== null && y !== null && Math.abs(y - lastY) > 2 && !s.endsWith('\n')) s += '\n';
         s += it.str; if (it.hasEOL) s += '\n'; lastY = y;
       }
+      page.cleanup?.();
       pages.push(fixCJK(s).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim());
     }
     let outline = [];
@@ -46,8 +48,12 @@ const Books = {
     await page.render({ canvasContext: ctx, viewport: vp }).promise; const url = c.toDataURL('image/jpeg', 0.8); c.width = c.height = 0; return url;
   },
   async tesseract(dataUrl, progress) {
-    if (!window.Tesseract) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; s.onload = res; s.onerror = () => rej(new Error('离线 OCR 组件下载失败，请检查网络')); document.head.appendChild(s); });
-    const r = await Tesseract.recognize(dataUrl, 'chi_sim+eng', { logger: m => { if (m.status === 'recognizing text' && progress) progress(`本地识别中 ${Math.round(m.progress * 100)}%`); else if (progress && m.status) progress('本地 OCR：' + ({ 'loading language traineddata': '下载中文识别模型（约 20MB，仅首次）', 'initializing api': '初始化' }[m.status] || m.status)); } });
+    // 离线 OCR：所有组件（脚本 / wasm / 语言模型）都从本站 vendor/tesseract 加载，不使用任何 CDN
+    if (!window.Tesseract) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'vendor/tesseract/tesseract.min.js'; s.onload = res; s.onerror = () => rej(new Error('离线 OCR 组件加载失败，请检查网络')); document.head.appendChild(s); });
+    const base = new URL('vendor/tesseract/', location.href).href;
+    const logger = m => { if (m.status === 'recognizing text' && progress) progress(`本地识别中 ${Math.round(m.progress * 100)}%`); else if (progress && m.status) progress('本地 OCR：' + ({ 'loading language traineddata': '加载中文识别模型（约 4.6MB，仅首次）', 'initializing api': '初始化' }[m.status] || m.status)); };
+    const w = await Tesseract.createWorker('chi_sim+eng', 1, { workerPath: base + 'worker.min.js', corePath: base, langPath: base, workerBlobURL: false, logger });
+    let r; try { r = await w.recognize(dataUrl); } finally { w.terminate(); }
     return r.data.text.replace(/([\u4e00-\u9fa5])[ \t]+(?=[\u4e00-\u9fa5])/g, '$1');
   },
   headingRe: [
@@ -89,24 +95,41 @@ const Books = {
 };
 function bookById(id) { return S.books.find(b => b.id === id); }
 /* 导入结果确认 */
-function confirmImport({ title, text, pages, outline, source }) {
+let _bookSubj = '';
+function confirmImport({ title, text, pages, outline, source, ocrLocal = false }) {
   const opts = { auto: Books.split(text), outline: pages ? Books.fromPages(pages, outline) : null, single: [{ title: title || '全文', text }] };
   if (pages && pages.length > 1) { const per = Math.max(1, Math.ceil(pages.length / Math.min(20, pages.length))); opts.pages = []; for (let i = 0; i < pages.length; i += per) opts.pages.push({ title: `第 ${i + 1}${per > 1 ? '–' + Math.min(pages.length, i + per) : ''} 页`, text: pages.slice(i, i + per).join('\n\n') }); }
   let mode = opts.outline ? 'outline' : 'auto';
   const labels = { outline: 'PDF 目录', auto: '自动识别章节', pages: '按页分组', single: '不分章' };
   openSheet(`<h2>确认导入</h2>
     <label class="f"><span>教材名称</span><input type="text" id="bT" value="${esc(title)}"></label>
-    <label class="f"><span>科目</span><select id="bS">${subjOptions('')}</select></label>
+    <label class="f"><span>科目 / 课程</span><select id="bS">${subjOptions(_bookSubj)}</select></label>
+    ${ocrLocal && AI.ready() ? '<button class="btn small tinted" id="bAI" style="margin:0 0 12px">✨ AI 整理识别文字（修正错字、恢复段落）</button>' : ''}
     <label class="f"><span>章节划分方式</span><div class="seg" id="bM">${Object.keys(labels).filter(k => opts[k]).map(k => `<button data-m="${k}" class="${k === mode ? 'on' : ''}">${labels[k]}</button>`).join('')}</div></label>
     <div id="bP"></div>
     <button class="btn block" id="bOk" style="margin-top:12px">导入</button>`, el => {
     const draw = () => { const chs = opts[mode]; $('#bP', el).innerHTML = `<div class="small muted" style="margin:0 4px 6px">共 ${chs.length} 个章节，${text.length.toLocaleString()} 字（导入后可重命名、合并或删除章节）</div><div class="list" style="max-height:34vh;overflow:auto">${chs.slice(0, 200).map(c => `<div class="row" style="min-height:44px"><div class="grow"><div class="t">${esc(c.title)}</div><div class="s">${c.text.length} 字 · ${esc(c.text.slice(0, 40).replace(/\s+/g, ' '))}</div></div></div>`).join('')}</div>`; };
     draw();
+    const bai = $('#bAI', el); if (bai) bai.onclick = async () => {
+      try {
+        const chunks = []; for (let i = 0; i < text.length; i += 3500) chunks.push(text.slice(i, i + 3500));
+        const out = await withLoading('AI 正在整理文字…', async (sig, prog) => { const r = []; for (let i = 0; i < chunks.length; i++) { prog(`AI 正在整理文字 ${i + 1}/${chunks.length}…`); r.push(await AI.chat([{ role: 'system', content: '你是文字校对助手。' }, { role: 'user', content: '下面是教材照片 OCR 识别出的文字，可能有错字、多余空格和断行。请修正明显的识别错误、合并被错误断开的行、保留原有标题和题号，公式用 LaTeX（$...$）。只输出整理后的正文，不要添加任何解释。\n\n' + chunks[i] }], { signal: sig, temperature: 0.1 })); } return r.join('\n\n'); });
+        closeSheet(true); confirmImport({ title: $('#bT')?.value || title, text: out.trim(), pages: null, outline: null, source });
+      } catch (e) { showAIError(e); }
+    };
     $('#bM', el).onclick = e => { const b = e.target.closest('button'); if (!b) return; mode = b.dataset.m; $$('#bM button', el).forEach(x => x.classList.toggle('on', x === b)); draw(); };
     $('#bOk', el).onclick = () => {
       const b = { id: uid(), title: $('#bT', el).value.trim() || '未命名教材', subject: $('#bS', el).value, source, createdAt: Date.now(), chapters: opts[mode].map(c => ({ id: uid(), title: c.title, text: c.text })) };
       S.books.unshift(b); save('books'); closeSheet(); toast('导入成功'); location.hash = '#/learn/book/' + b.id;
     };
+  });
+}
+function bookImportSheet() {
+  openSheet(`<h2>导入教材</h2><div class="tt-choice">
+    <button class="tt-big" id="iPdf">${iconTile('doc', '#ff3b30', 22)}<div><b>PDF 文件</b><span>电子版教材、讲义、课件</span></div></button>
+    <button class="tt-big" id="iImg">${iconTile('camera', '#34c759', 22)}<div><b>拍几页照片</b><span>可一次选多张${AI.visionReady() ? '，AI 识别' : '，本地识别文字'}</span></div></button>
+    <button class="tt-big" id="iTxt">${iconTile('notes', '#0a84ff', 22)}<div><b>粘贴文字</b><span>或选择 .txt / .md 文件</span></div></button></div>`, el => {
+    $('#iPdf', el).onclick = () => { closeSheet(true); importPdf(); }; $('#iImg', el).onclick = () => { closeSheet(true); importImages(false); }; $('#iTxt', el).onclick = importText;
   });
 }
 async function importPdf() {
@@ -134,23 +157,24 @@ async function importPdf() {
     const text = pages.join('\n\n').trim();
     if (!text) return toast('没有识别到任何文字');
     confirmImport({ title: file.name.replace(/\.pdf$/i, ''), text, pages, outline, source: 'pdf' });
-  } catch (e) { loading(false); if (e.kind !== 'abort') openSheet(`<h2>PDF 解析失败</h2><div class="notice err">${esc(e.message || e)}</div><p class="small muted">如果 PDF 设置了密码或已损坏，请先在电脑上另存一份再导入。</p><button class="btn block" onclick="closeSheet()">知道了</button>`); }
+  } catch (e) { loading(false); if (e.kind !== 'abort') openSheet(`<h2>PDF 解析失败</h2><div class="notice err">${esc(e.message || e)}</div><p class="small muted">如果 PDF 设置了密码或已损坏，请先在电脑上另存一份再导入。</p><button class="btn block" data-close-sheet>知道了</button>`); }
 }
 async function importImages(capture) {
   const files = await pickFile('image/*', { multiple: !capture, capture }); if (!files.length) return;
   const useAI = AI.visionReady();
-  if (!useAI && !(await confirmBox('未配置 AI 视觉模型，将使用本地 OCR（首次需下载约 20MB 识别模型，速度较慢，准确度一般）。继续吗？\n配置 AI 后识别效果更好。', '继续', false))) return;
+  if (!useAI && !(await confirmBox('未配置 AI 视觉模型，将使用本地 OCR（首次需从本站加载约 9MB 识别组件，速度较慢，准确度一般）。继续吗？\n配置 AI 后识别效果更好。', '继续', false))) return;
   const ctl = new AbortController(); loading(true, '正在处理图片…', ctl); const texts = [];
   try {
     for (let i = 0; i < files.length; i++) {
       $('#loadingText').textContent = `正在识别第 ${i + 1}/${files.length} 张图片…`;
       const img = await compressImage(files[i], 2000, 0.85);
       texts.push(useAI ? await AI.ocr(img, { signal: ctl.signal }) : await Books.tesseract(img, t => $('#loadingText').textContent = `第 ${i + 1}/${files.length} 张 · ` + t));
+      await new Promise(r => setTimeout(r, 0));
     }
   } catch (e) { loading(false); if (e.kind !== 'abort') showAIError(e); if (!texts.length) return; }
   loading(false);
   const text = texts.join('\n\n').trim(); if (!text) return toast('没有识别到文字');
-  confirmImport({ title: '拍照教材 ' + fmtDate(Date.now()), text, pages: texts.length > 1 ? texts : null, source: 'image' });
+  confirmImport({ title: '拍照教材 ' + fmtDate(Date.now()), text, pages: texts.length > 1 ? texts : null, source: 'image', ocrLocal: !useAI });
 }
 function importText() {
   openSheet(`<h2>粘贴文本</h2><label class="f"><span>标题</span><input type="text" id="xT" placeholder="如：高一物理 必修一"></label>
@@ -162,15 +186,13 @@ function importText() {
 }
 route('/learn/books', 'learn', v => {
   setTop('教材', { back: '#/learn' });
-  v.innerHTML = `<div class="grid3" style="margin-bottom:12px">
-    <button class="tile" id="iPdf" style="border:0;align-items:center;text-align:center"><div class="ic" style="--c:#ff3b30">${icon('doc', 22)}</div><div class="tt">PDF</div><div class="ts">解析文字</div></button>
-    <button class="tile" id="iImg" style="border:0;align-items:center;text-align:center"><div class="ic" style="--c:#34c759">${icon('image', 22)}</div><div class="tt">图片</div><div class="ts">相册/拍照</div></button>
-    <button class="tile" id="iTxt" style="border:0;align-items:center;text-align:center"><div class="ic" style="--c:#0a84ff">${icon('notes', 22)}</div><div class="tt">文本</div><div class="ts">粘贴/文件</div></button></div>
-    <button class="btn ghost block" id="iCam" style="margin-bottom:12px">${icon('camera', 18)} 直接拍照导入</button>
-    ${!AI.visionReady() ? `<div class="notice info">图片和扫描版 PDF 推荐配置 AI 视觉模型识别（<a href="#/me/settings">去设置</a>）；未配置时使用本地 OCR。</div>` : ''}
+  if (Q.has('subject')) _bookSubj = Q.get('subject'); else _bookSubj = '';
+  v.innerHTML = `<button class="btn block big" id="iBig" style="margin-bottom:8px">${icon('plus', 18)} 导入教材</button>
+    <div class="small muted" style="margin:0 4px 14px">PDF、拍几页照片或粘贴文字 → 自动分章 → 一键生成卡片 / 出试卷 / 整理重点${_bookSubj ? ` · 将归入「${esc(subj(_bookSubj).name)}」` : ''}</div>
     <h3>我的教材</h3>
     ${S.books.length ? `<div class="list">${S.books.map(b => `<a class="row" href="#/learn/book/${b.id}"><div class="grow"><div class="t">${esc(b.title)}</div><div class="s">${b.chapters.length} 章节 · ${Books.totalChars(b).toLocaleString()} 字 · ${fmtDate(b.createdAt)}</div></div>${subjChip(b.subject)}<span class="chev">›</span></a>`).join('')}</div>` : `${emptyState('books', '还没有教材', '导入课本 PDF、拍照或粘贴文本，就能按章节阅读、生成卡片和 AI 出卷。')}`}`;
-  $('#iPdf').onclick = importPdf; $('#iImg').onclick = () => importImages(false); $('#iCam').onclick = () => importImages(true); $('#iTxt').onclick = importText;
+  $('#iBig').onclick = bookImportSheet;
+  if (Q.get('import') === '1') { history.replaceState(null, '', location.href.replace(/([?&])import=1&?/, '$1').replace(/[?&]$/, '')); bookImportSheet(); }
 });
 route('/learn/book/:id', 'learn', (v, id) => {
   const b = bookById(id); if (!b) { location.hash = '#/learn/books'; return; }
@@ -178,13 +200,14 @@ route('/learn/book/:id', 'learn', (v, id) => {
   let sel = new Set();
   const draw = () => {
     v.innerHTML = `<div class="card"><div class="chips">${subjChip(b.subject)}<span class="chip">${b.chapters.length} 章节</span><span class="chip">${Books.totalChars(b).toLocaleString()} 字</span><span class="chip">${{ pdf: 'PDF', image: '图片识别', text: '文本' }[b.source] || ''}</span></div>
-      <div class="btns" style="margin-top:12px"><a class="btn" href="#/learn/exam/new?book=${b.id}">${icon('exam', 18)} 用这本出试卷</a></div></div>
+      <div class="bk-acts"><button class="bk-a" id="bkC">${iconTile('cards', 'var(--c-cards)', 20)}<span>生成卡片</span></button><a class="bk-a" href="#/learn/exam/new?book=${b.id}">${iconTile('exam', 'var(--c-blue)', 20)}<span>出试卷</span></a><button class="bk-a" id="bkK">${iconTile('sparkle', 'var(--c-notes)', 20)}<span>整理重点</span></button></div></div>
       <h3>章节 <span class="small" style="font-weight:400">（勾选可合并或删除）</span></h3>
       <div class="list" id="chl">${b.chapters.map((c, i) => `<div class="row" data-id="${c.id}"><button class="check ${sel.has(c.id) ? 'on' : ''}" data-act="sel">${sel.has(c.id) ? '✓' : ''}</button><div class="grow" data-act="open"><div class="t">${i + 1}. ${esc(c.title)}</div><div class="s">${c.text.length} 字 · ${esc(c.text.slice(0, 50).replace(/\s+/g, ' '))}</div></div><span class="chev">›</span></div>`).join('')}</div>
       ${sel.size ? `<div class="btns"><button class="btn ghost" id="mg" ${sel.size < 2 ? 'disabled' : ''}>合并所选（${sel.size}）</button><button class="btn danger" id="dl">删除所选</button></div>` : ''}
       <div class="btns" style="margin-top:10px"><button class="btn plain" id="addc">＋ 添加章节</button></div>`;
     $('#chl').onclick = e => { const r = e.target.closest('[data-id]'); if (!r) return; const act = e.target.closest('[data-act]')?.dataset.act; if (act === 'sel') { sel.has(r.dataset.id) ? sel.delete(r.dataset.id) : sel.add(r.dataset.id); draw(); } else location.hash = `#/learn/book/${b.id}/ch/${r.dataset.id}`; };
     const mg = $('#mg'); if (mg) mg.onclick = () => { const chs = b.chapters.filter(c => sel.has(c.id)); const first = chs[0]; first.text = chs.map((c, i) => (i ? c.title + '\n' : '') + c.text).join('\n\n'); b.chapters = b.chapters.filter(c => c === first || !sel.has(c.id)); sel.clear(); save('books'); draw(); toast('已合并'); };
+    $('#bkC').onclick = () => aiCardsFromText(b.title, bookText(b), b.subject); $('#bkK').onclick = () => aiKeyPoints(b.title, bookText(b), b.subject);
     const dl = $('#dl'); if (dl) dl.onclick = async () => { if (await confirmBox(`删除所选 ${sel.size} 个章节？`, '删除')) { b.chapters = b.chapters.filter(c => !sel.has(c.id)); sel.clear(); save('books'); draw(); } };
     $('#addc').onclick = () => { const c = { id: uid(), title: '新章节', text: '' }; b.chapters.push(c); save('books'); location.hash = `#/learn/book/${b.id}/ch/${c.id}?edit=1`; };
   };
@@ -203,10 +226,11 @@ route('/learn/book/:id/ch/:cid', 'learn', (v, id, cid) => {
     $('#tg').onclick = () => { if (editing) { c.title = $('#cT').value.trim() || c.title; c.text = $('#cX').value; save('books'); } editing = !editing; draw(); };
     const i = b.chapters.indexOf(c);
     v.innerHTML = editing ? `<label class="f"><span>章节标题</span><input type="text" id="cT" value="${esc(c.title)}"></label><textarea id="cX" style="min-height:62vh">${esc(c.text)}</textarea>`
-      : `<div class="btns" style="margin-bottom:12px"><a class="btn" href="#/learn/exam/new?book=${b.id}&ch=${c.id}">${icon('exam', 18)} 本章出卷</a><button class="btn ghost" id="mkc">🃏 AI 生成卡片</button></div>
+      : `<div class="btns" style="margin-bottom:12px"><a class="btn" href="#/learn/exam/new?book=${b.id}&ch=${c.id}">${icon('exam', 18)} 本章出卷</a><button class="btn ghost" id="mkc">🃏 生成卡片</button><button class="btn ghost" id="mkk">✨ 整理重点</button></div>
         <div class="card"><div class="pre" style="font-size:16px;line-height:1.75">${esc(c.text) || '<span class="muted">（空）</span>'}</div></div>
         <div class="btns">${i > 0 ? `<a class="btn plain" href="#/learn/book/${b.id}/ch/${b.chapters[i - 1].id}">‹ 上一章</a>` : ''}${i < b.chapters.length - 1 ? `<a class="btn plain" href="#/learn/book/${b.id}/ch/${b.chapters[i + 1].id}">下一章 ›</a>` : ''}</div>`;
     const mk = $('#mkc'); if (mk) mk.onclick = () => aiCardsFromText(c.title, c.text, b.subject);
+    const mkk = $('#mkk'); if (mkk) mkk.onclick = () => aiKeyPoints(`${b.title} · ${c.title}`, c.text, b.subject);
   };
   draw();
   return () => { if (editing && $('#cX')) { c.title = $('#cT').value.trim() || c.title; c.text = $('#cX').value; save('books'); } };
@@ -227,4 +251,18 @@ async function aiCardsFromText(title, text, subject) {
       } catch (e) { showAIError(e); }
     };
   });
+}
+const bookText = b => b.chapters.map(c => `## ${c.title}\n${c.text}`).join('\n\n');
+// 整理重点：AI 把教材内容提炼成一篇 Markdown 重点笔记，保存到「笔记」
+async function aiKeyPoints(title, text, subject) {
+  if (!AI.ready()) return showAIError(new AIError('整理重点需要先配置 AI。请到「我的 → 设置 → AI 设置」填写。', 'config'));
+  if (!String(text).trim()) return toast('这部分还没有文字内容');
+  try {
+    const body = await withLoading('AI 正在整理重点…', sig => AI.chat([
+      { role: 'system', content: '你是一名大学老师，擅长帮大一学生整理复习重点。' },
+      { role: 'user', content: `把下面的教材内容整理成一份简洁的复习重点笔记（Markdown）：\n1. 按章节/主题分小标题（##）\n2. 列出核心概念、定义、公式（LaTeX，用 $...$）、结论\n3. 标出易错点和常考点（用 **加粗**）\n4. 最后给 3 个自测问题\n只输出笔记正文。\n\n教材内容：\n${String(text).slice(0, S.settings.ai.maxChars)}` }
+    ], { signal: sig, temperature: 0.3 }));
+    const n = { id: uid(), title: `${title.slice(0, 40)} · 重点`, body: String(body).replace(/^```(?:markdown|md)?\s*/i, '').replace(/```\s*$/, '').trim(), tags: ['教材重点'], subject: subject || '', pinned: false, createdAt: Date.now(), updatedAt: Date.now() };
+    S.notes.unshift(n); save('notes'); toast('已保存到笔记'); location.hash = '#/learn/note/' + n.id;
+  } catch (e) { showAIError(e); }
 }

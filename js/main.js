@@ -23,6 +23,7 @@ route('/today', 'today', v => {
   v.innerHTML = `<header class="t5-head"><div><div class="t5-date">${d.getMonth() + 1}月${d.getDate()}日 星期${WEEK[d.getDay()]}<span class="t5-jp">${'日月火水木金土'[d.getDay()]}曜日</span></div><h2 class="large-title">${greet()}${S.settings.name ? '，' + esc(S.settings.name) : ''}</h2></div><a class="t5-av" href="#/me" aria-label="我的">${esc((S.settings.name || '学').slice(0, 1))}</a></header>
   ${isIOS() && !isStandalone() && !S.meta.hideInstall ? `<div class="notice info" id="inst"><b>添加到主屏幕</b>：点 Safari 底部的「分享」按钮，选择「添加到主屏幕」，即可像 App 一样全屏使用、离线可用。<button class="btn small plain" id="hideInst" style="margin-top:8px">不再提示</button></div>` : ''}
   ${Remind.bannerHtml()}
+  ${ttNextHtml()}
   ${st.running ? `<a class="card focus-live" href="#/focus">${icon('focus', 28)}<div style="flex:1"><b>${PHASES[st.phase]}进行中</b><div class="small" style="opacity:.9">${esc(st.label || subj(st.subject).name)}</div></div><b id="tdTime" class="mono" style="font-size:24px"></b></a>` : ''}
   ${secHead('活动', '#/me/stats')}
   <a class="card act7" href="#/me/achievements"><div class="a7-top"><div class="a7-ring">${Game.rings(R, 148)}<div class="a7-c"><b class="num">${pct}<small>%</small></b><span>今日</span></div></div>
@@ -40,20 +41,22 @@ route('/today', 'today', v => {
   <div class="grid3 quick">${[['#/learn/solve', 'camera', '拍照搜题', 'var(--c-exam)'], ['#/learn/exams', 'exam', 'AI 出卷', 'var(--c-blue)'], ['#/learn/wrong', 'wrong', `错题${wr ? ' ' + wr : ''}`, 'var(--c-wrong)'], ['#/learn/notes', 'notes', '笔记', 'var(--c-notes)'], ['#/learn/decks', 'cards', '卡片', 'var(--c-cards)'], ['#/me/achievements', 'trophy', '奖章', 'var(--c-streak)']].map(([h, i, t, c]) => `<a class="tile qt" href="${h}">${iconTile(i, c)}<div class="tt">${t}</div></a>`).join('')}</div>`;
   const hi = $('#hideInst'); if (hi) hi.onclick = () => { S.meta.hideInstall = true; DB.set('meta', S.meta); $('#inst').remove(); };
   bindTodoList($('#tdl'));
-  const tick = () => { const el = $('#tdTime'); if (el) { const r = Focus.remain(); el.textContent = `${pad2(Math.floor(r / 60000))}:${pad2(Math.floor(r % 60000 / 1000))}`; } };
+  let _nx = TT.next(), _nxT = 0;
+  const tick = () => { if ($('#nxCd') && ++_nxT % 15 === 0) { const n = TT.next(); if (n && _nx && n.ref !== _nx.ref) { rerender(); return; } _nx = n; $('#nxCd').textContent = ttCountdown(n); } const el = $('#tdTime'); if (el) { const r = Focus.remain(); el.textContent = `${pad2(Math.floor(r / 60000))}:${pad2(Math.floor(r % 60000 / 1000))}`; } };
   tick(); const t = setInterval(tick, 1000); return () => clearInterval(t);
 });
 route('/learn', 'learn', v => {
   setTop('学习');
   const due = Cards.dueTotal(); const wr = S.wrongs.filter(w => !w.mastered).length; 
   const tiles = [
+    ['#/learn/tt', 'calendar', '课表', S.courses.length ? (() => { const n = TT.next(); return n ? `接下来：${esc(n.title)}` : `第 ${TT.curWeek()} 周`; })() : '导入课表 · 临时安排', '#5B8DEF'],
     ['#/learn/solve', 'camera', '拍照搜题', `分步讲解 · 可追问`, '#8b5cf6'],
     ['#/learn/exams', 'exam', 'AI 出卷 / 模拟考', `${S.exams.length} 份 · 期末 / 四级`, '#6366f1'],
     ['#/learn/wrong', 'wrong', '错题本', wr ? `${wr} 道待攻克` : `${S.wrongs.length} 道`, '#f05252'],
     ['#/learn/wrong-analysis', 'target', '薄弱点分析', '错误率 · 专项练习', '#ec4899'],
     ['#/learn/decks', 'cards', '卡片复习', due ? `${due} 张待复习` : `${S.cards.length} 张卡片`, '#3b82f6'],
     ['#/learn/notes', 'notes', '笔记', `${S.notes.length} 篇 · 支持公式`, '#f59e0b'],
-    ['#/learn/books', 'books', '教材导入', `${S.books.length} 本 · PDF/图片/文本`, '#10b981'],
+    ['#/learn/books', 'books', '导入教材', S.books.length ? `${S.books.length} 本 · 卡片 / 出卷 / 重点` : 'PDF / 拍照 / 粘贴文字', '#10b981'],
     ['#/learn/banks', 'layers', '题库刷题', S.banks.length ? `${S.banks.reduce((a, b) => a + b.questions.length, 0)} 题 · 断点续刷` : '导入题库 · 随机抽题', '#14b8a6']
   ];
   v.innerHTML = `<div class="grid2">${tiles.map(([h, i, t, s, c]) => `<a class="tile" href="${h}">${iconTile(i, c)}<div class="tt">${t}</div><div class="ts">${s}</div></a>`).join('')}</div>
@@ -72,22 +75,30 @@ route('/me/settings', 'me', v => {
   const vs = lang => (TTS.voices.length ? TTS.voices : (TTS.ok ? speechSynthesis.getVoices() : [])).filter(x => lang === 'zh' ? /^(zh|cmn)/i.test(x.lang) : /^en/i.test(x.lang)).map(x => `<option value="${esc(x.voiceURI)}" ${(lang === 'zh' ? T.zhVoice : T.enVoice) === x.voiceURI ? 'selected' : ''}>${esc(x.name)} (${esc(x.lang)})</option>`).join('');
   v.innerHTML = `<h3>AI 设置（OpenAI 兼容接口）</h3>
   <div class="card">
-    <div class="notice info small">AI 用于：出试卷、批改主观题、图片/扫描版 PDF 识别、生成卡片、举一反三。API Key <b>只保存在本机</b>，由浏览器直接发送给你选择的服务商，不经过任何其他服务器。</div>
+    <div class="notice info small">AI 用于：出试卷、批改主观题、图片/扫描版 PDF 识别、生成卡片、举一反三。</div>
     <label class="f"><span>服务商</span><select id="aP">${Object.entries(AI_PRESETS).map(([k, x]) => `<option value="${k}" ${k === c.preset ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
-    <div class="small muted" id="aNote" style="margin:-4px 2px 12px">${esc(p.note)}${p.site ? ` <a href="${p.site}" target="_blank" rel="noopener">获取 API Key ↗</a>` : ''}</div>
+    <div class="small muted" id="aNote" style="margin:-4px 2px 12px">${esc(p.note)}${p.site ? ` <a href="${p.site}" target="_blank" rel="noopener noreferrer">获取 API Key ↗</a>` : ''}</div>
     <label class="f"><span>接口地址 Base URL</span><input type="url" id="aU" value="${esc(c.baseUrl)}" placeholder="https://api.example.com/v1" autocapitalize="off" autocorrect="off"></label>
-    <label class="f"><span>API Key</span><input type="password" id="aK" value="${esc(c.apiKey)}" placeholder="sk-..." autocapitalize="off" autocorrect="off" autocomplete="off"></label>
+    <label class="f"><span>API Key</span><span class="key-row"><input type="password" id="aK" placeholder="sk-..." autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-lpignore="true"><button type="button" class="btn small plain" id="aKs" aria-label="显示或隐藏 API Key">显示</button></span></label>
+    <div class="key-tools"><span class="small muted" id="aKst">${c.apiKey ? '已保存 Key：' + esc(maskKey(c.apiKey)) : '尚未填写 Key'}</span><button type="button" class="btn small danger" id="aKc" ${c.apiKey ? '' : 'disabled'}>清除 API Key</button></div>
     <div class="grid2"><label class="f"><span>文字模型</span><input type="text" id="aM" value="${esc(c.model)}" autocapitalize="off" autocorrect="off"></label><label class="f"><span>视觉模型（图片识别）</span><input type="text" id="aV" value="${esc(c.visionModel)}" placeholder="留空则用文字模型" autocapitalize="off" autocorrect="off"></label></div>
     <div class="grid2"><label class="f"><span>出题时教材最多字数</span><input type="number" id="aC" value="${c.maxChars}" inputmode="numeric"></label><div class="row" style="padding:0;border:0;min-height:0;margin-top:22px"><div class="grow small">JSON 模式</div><label class="switch"><input type="checkbox" id="aJ" ${c.jsonMode ? 'checked' : ''}><span></span></label></div></div>
     <div class="btns"><button class="btn plain" id="aT">测试连接</button><button class="btn" id="aS">保存</button></div>
     <div id="aR" style="margin-top:10px"></div>
+    <details class="privacy"><summary>🔒 API Key 隐私说明</summary><ul class="small">
+      <li>Key <b>只保存在这台设备的浏览器里</b>（本地数据库），不会上传到 GitHub，也不会发给我们——本应用没有服务器。</li>
+      <li>使用 AI 时，Key 只放在请求头里，经 HTTPS <b>直接发送给你上面填写的服务商</b>，不经过任何中转。</li>
+      <li>导出备份时默认<b>不包含</b> Key；分享截图前请先确认 Key 处于隐藏状态。</li>
+      <li>建议为本应用<b>单独创建一个 Key，并在服务商后台设置消费上限/余额提醒</b>，不要使用主账号的 Key。</li>
+      <li>如果手机丢失或怀疑泄露：登录服务商控制台（API Keys 页面）<b>删除/停用这个 Key</b> 即可立刻失效，再新建一个填回来。</li>
+    </ul></details>
   </div>
   <h3>外观</h3><div class="card"><div class="seg" id="th" style="margin:0">${[['auto', '跟随系统'], ['light', '浅色'], ['dark', '深色']].map(([k, l]) => `<button data-k="${k}" class="${S.settings.theme === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     <label class="f" style="margin:12px 0 0"><span>我的称呼</span><input type="text" id="nm" value="${esc(S.settings.name)}" placeholder="用于首页问候"></label></div>
   <h3>🃏 卡片复习</h3><div class="card"><label class="f" style="margin:0"><span>每个卡组每天新卡上限</span><input type="number" id="np" value="${S.settings.cards.newPerDay}" inputmode="numeric"></label>
     <label class="f" style="margin:12px 0 0"><span>FSRS 目标记住率：<b id="rtv">${Math.round((S.settings.cards.retention || .9) * 100)}%</b></span><input type="range" id="rtn" min="0.8" max="0.97" step="0.01" value="${S.settings.cards.retention || .9}"></label>
     <div class="small muted">默认 90%。调高 → 记得更牢但每天复习更多；调低 → 复习更少但更容易忘。旧卡片的 SM-2 进度会在下次复习时自动换算为 FSRS 记忆状态。</div></div>
-  <h3>科目</h3><div class="list" id="sl">${S.settings.subjects.map((s, i) => `<div class="row" data-i="${i}"><input type="color" value="${s.color}" data-k="color" style="width:36px;height:36px;border:0;padding:0;background:none;border-radius:50%"><input type="text" value="${esc(s.name)}" data-k="name" style="flex:1"><button class="icon-btn" data-k="del" style="color:var(--bad);font-size:22px">⊖</button></div>`).join('')}</div>
+  <h3>科目</h3><div class="list" id="sl">${S.settings.subjects.map((s, i) => `<div class="row" data-i="${i}"><input type="color" value="${esc(safeColor(s.color, '#8e8e93'))}" data-k="color" style="width:36px;height:36px;border:0;padding:0;background:none;border-radius:50%"><input type="text" value="${esc(s.name)}" data-k="name" style="flex:1"><button class="icon-btn" data-k="del" style="color:var(--bad);font-size:22px">⊖</button></div>`).join('')}</div>
   <button class="btn ghost block" id="addSub">＋ 添加科目</button>
   <button class="btn ghost block" id="fresh" style="margin-top:8px">${icon('cap', 18)} 应用大一课程预设（高数 / 线代 / 英语 / 物理 / C语言 / 思政）</button>
   <h3>复习提醒</h3><div class="card" id="rmd">
@@ -103,14 +114,19 @@ route('/me/settings', 'me', v => {
     <div class="grid2" style="margin-top:8px"><label class="f"><span>英文声音</span><select id="tEn"><option value="">自动</option>${vs('en')}</select></label><label class="f"><span>中文声音</span><select id="tZh"><option value="">自动</option>${vs('zh')}</select></label></div>
     <div class="btns"><button class="btn plain" id="tTe">试听英文</button><button class="btn plain" id="tTz">试听中文</button></div>
     <div class="small muted" style="margin-top:8px">自动识别中英文并切换声音。iPhone 可在「设置 → 辅助功能 → 朗读内容 → 声音」下载更自然的增强版声音（如 Samantha、婷婷）。</div>` : '<div class="small muted">当前浏览器不支持语音合成。</div>'}</div>`;
-  const fill = k => { const x = AI_PRESETS[k]; if (k !== 'custom') { $('#aU').value = x.baseUrl; $('#aM').value = x.model; $('#aV').value = x.visionModel; } $('#aNote').innerHTML = `${esc(x.note)}${x.site ? ` <a href="${x.site}" target="_blank" rel="noopener">获取 API Key ↗</a>` : ''}`; };
+  const fill = k => { const x = AI_PRESETS[k]; if (k !== 'custom') { $('#aU').value = x.baseUrl; $('#aM').value = x.model; $('#aV').value = x.visionModel; } $('#aNote').innerHTML = `${esc(x.note)}${x.site ? ` <a href="${x.site}" target="_blank" rel="noopener noreferrer">获取 API Key ↗</a>` : ''}`; };
   $('#aP').onchange = e => fill(e.target.value);
+  $('#aK').value = c.apiKey || ''; // 通过属性赋值，不把 Key 写进 HTML 文本
+  $('#aKs').onclick = () => { const k = $('#aK'); const show = k.type === 'password'; k.type = show ? 'text' : 'password'; $('#aKs').textContent = show ? '隐藏' : '显示'; };
+  $('#aKc').onclick = async () => { if (!await confirmBox('清除本机保存的 API Key？\n（这只删除本机副本；如怀疑泄露，请同时到服务商后台停用该 Key）')) return; c.apiKey = ''; saveSettings(); $('#aK').value = ''; $('#aK').type = 'password'; $('#aKs').textContent = '显示'; $('#aKst').textContent = '尚未填写 Key'; $('#aKc').disabled = true; toast('已清除 API Key'); };
   const collect = () => Object.assign(c, { preset: $('#aP').value, baseUrl: $('#aU').value.trim(), apiKey: $('#aK').value.trim(), model: $('#aM').value.trim(), visionModel: $('#aV').value.trim(), jsonMode: $('#aJ').checked, maxChars: Math.max(2000, Math.min(200000, +$('#aC').value || 12000)) });
-  $('#aS').onclick = () => { collect(); saveSettings(); toast('AI 设置已保存'); };
+  const urlOk = () => { const u = $('#aU').value.trim(); const bad = u ? AI.checkUrl(u) : ''; $('#aR').innerHTML = bad ? `<div class="notice err">${esc(bad)}</div>` : ''; return !bad; };
+  const afterSave = () => { const k = c.apiKey; $('#aKst').textContent = k ? '已保存 Key：' + maskKey(k) : '尚未填写 Key'; $('#aKc').disabled = !k; $('#aK').type = 'password'; $('#aKs').textContent = '显示'; };
+  $('#aS').onclick = () => { if (!urlOk()) return; collect(); saveSettings(); afterSave(); toast('AI 设置已保存'); };
   $('#aT').onclick = async () => {
-    collect(); saveSettings(); const out = $('#aR'); out.innerHTML = '<div class="notice info">正在测试…</div>';
+    if (!urlOk()) return; collect(); saveSettings(); afterSave(); const out = $('#aR'); out.innerHTML = '<div class="notice info">正在测试…</div>';
     try { const t0 = Date.now(); const r = await AI.json([{ role: 'user', content: '请只输出 JSON：{"ok":true,"msg":"用一句中文打个招呼"}' }], o => { if (!o || o.ok === undefined) throw new Error('缺少 ok 字段'); return o; }, { maxTokens: 100 }); out.innerHTML = `<div class="notice info">✅ 连接成功（${((Date.now() - t0) / 1000).toFixed(1)} 秒）：${esc(r.msg || '')}</div>`; }
-    catch (e) { out.innerHTML = `<div class="notice err pre">${esc(e.message)}</div>`; }
+    catch (e) { out.innerHTML = `<div class="notice err pre">${esc(AI.redact(e.message))}</div>`; }
   };
   $('#th').onclick = e => { const b = e.target.closest('button'); if (!b) return; S.settings.theme = b.dataset.k; saveSettings(); applyTheme(); rerender(); };
   $('#nm').onchange = e => { S.settings.name = e.target.value.trim(); saveSettings(); };
@@ -143,12 +159,16 @@ route('/me/backup', 'me', v => {
   v.innerHTML = `<div class="notice">所有数据都只保存在<b>这台设备的浏览器</b>里。清除 Safari 网站数据、删除主屏幕 App 或长期不用（iOS 可能清理）都可能导致数据丢失，请定期导出备份。</div>
   <div class="card"><b>导出备份</b><div class="small muted" style="margin:4px 0 10px">当前数据约 ${(size / 1024).toFixed(0)} KB（${S.notes.length} 笔记、${S.cards.length} 卡片、${S.books.length} 教材、${S.exams.length} 试卷、${S.wrongs.length} 错题、${S.sessions.length} 专注记录）</div>
   <div class="row" style="padding:0 0 10px;border:0;min-height:0"><div class="grow small">备份中包含 API Key</div><label class="switch"><input type="checkbox" id="incKey"><span></span></label></div>
+  <div class="notice err small bk-warn hidden" id="incKeyW">⚠️ 备份文件将包含<b>明文 API Key</b>。任何拿到这个文件的人（网盘、聊天记录、AirDrop）都能使用你的 Key 消费额度。仅在自己换手机时勾选，用完请删除该文件。</div>
   <button class="btn block" id="exp">导出 JSON 备份</button></div>
   <div class="card"><b>导入备份</b><div class="small muted" style="margin:4px 0 10px">「合并」保留现有数据并加入备份中的新内容；「覆盖」用备份完全替换当前数据。</div>
   <div class="btns"><button class="btn ghost" id="impM">合并导入</button><button class="btn danger" id="impR">覆盖导入</button></div></div>
   <div class="card"><b>危险操作</b><div class="btns" style="margin-top:10px"><button class="btn danger" id="wipe">清空所有数据</button></div></div>`;
+  $('#incKey').onchange = e => $('#incKeyW').classList.toggle('hidden', !e.target.checked);
   $('#exp').onclick = async () => {
-    const st = structuredClone(S.settings); if (!$('#incKey').checked) st.ai.apiKey = '';
+    const withKey = $('#incKey').checked && !!S.settings.ai.apiKey;
+    if (withKey && !(await confirmBox('这个备份会包含明文 API Key，确定导出吗？', '仍然导出'))) return;
+    const st = structuredClone(S.settings); if (!withKey) st.ai.apiKey = '';
     const data = { app: 'study-workbench', version: 1, exportedAt: new Date().toISOString(), settings: st, ...Object.fromEntries(COLLECTIONS.map(c => [c, S[c]])) };
     const name = `学习工作台备份-${dayKey()}.json`; const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     const file = new File([blob], name, { type: 'application/json' });
@@ -167,7 +187,25 @@ route('/me/backup', 'me', v => {
       if (mode === 'replace') S[c] = arr; else { const ids = new Set(S[c].map(x => x.id)); arr.forEach(x => { if (!x.id || !ids.has(x.id)) { S[c].push(x); added++; } }); }
       await saveNow(c);
     }
-    if (data.settings) { const key = S.settings.ai.apiKey; if (mode === 'replace') S.settings = deepMerge(structuredClone(DEFAULT_SETTINGS), data.settings); if (!S.settings.ai.apiKey) S.settings.ai.apiKey = key; if (mode === 'replace' && data.settings.subjects) S.settings.subjects = data.settings.subjects; saveSettings(); applyTheme(); }
+    if (data.settings && typeof data.settings === 'object') {
+      // AI 设置（接口地址 / Key / 模型）绝不静默导入：防止恶意备份把你的 Key 改发到别人的服务器
+      const curAI = structuredClone(S.settings.ai); const inAI = data.settings.ai && typeof data.settings.ai === 'object' ? data.settings.ai : null;
+      if (mode === 'replace') { S.settings = deepMerge(structuredClone(DEFAULT_SETTINGS), { ...data.settings, ai: {} }); if (Array.isArray(data.settings.subjects)) S.settings.subjects = data.settings.subjects.filter(x => x && typeof x === 'object').map(x => ({ id: String(x.id || uid()), name: String(x.name || '未命名'), color: safeColor(x.color) })); }
+      S.settings.ai = curAI;
+      const inUrl = String(inAI?.baseUrl || '').trim(), inKey = String(inAI?.apiKey || '').trim();
+      if (inAI && (inUrl && inUrl !== curAI.baseUrl || inKey && inKey !== curAI.apiKey)) {
+        const bad = inUrl ? AI.checkUrl(inUrl) : '';
+        if (bad) toast('备份中的 AI 接口地址不安全，已忽略');
+        else if (await confirmBox(`备份中包含另一套 AI 设置：\n接口地址：${inUrl || '（未填写）'}\n模型：${inAI.model || '（未填写）'}${inKey ? '\n含 API Key：' + maskKey(inKey) : ''}\n\n只有确认这是你自己的备份时才导入。导入后 AI 请求（含 Key）会发往上面的地址。`, '导入 AI 设置')) {
+          const nu = { ...curAI, ...Object.fromEntries(['preset', 'baseUrl', 'model', 'visionModel', 'jsonMode', 'maxChars'].filter(k => inAI[k] != null).map(k => [k, inAI[k]])) };
+          if (inUrl !== curAI.baseUrl && !inKey) nu.apiKey = ''; // 换了服务商却沿用旧 Key 会把旧 Key 发给新地址
+          if (inKey) nu.apiKey = inKey;
+          if (!AI_PRESETS[nu.preset]) nu.preset = 'custom';
+          S.settings.ai = nu;
+        }
+      }
+      saveSettings(); applyTheme();
+    }
     toast(mode === 'replace' ? '已恢复备份' : `已合并，新增 ${added} 条`); rerender();
   };
   $('#impM').onclick = () => imp('merge'); $('#impR').onclick = () => imp('replace');

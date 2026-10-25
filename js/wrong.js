@@ -122,7 +122,7 @@ route('/learn/wrong-review', 'learn', v => {
   let i = 0, reveal = false, ok = 0, w_cele = false; Game.resetCombo();
   const draw = () => {
     if (!list.length) { v.innerHTML = `<div class="empty"><div class="big">${icon('trophy', 30)}</div><h2>没有待攻克的错题</h2><a class="btn" href="#/learn/wrong">返回错题本</a></div>`; return; }
-    if (i >= list.length) { if (!w_cele) { w_cele = true; Game.practiceDone(list.length, ok, list.length * 3, '错题复习完成！'); } v.innerHTML = `<div class="empty">${Game.doneIcon('var(--c-wrong)')}<h2>本轮复习完成</h2><p>共 ${list.length} 题，会了 ${ok} 题</p><div class="btns"><a class="btn plain" href="#/learn/wrong">返回</a>${AI.ready() ? `<a class="btn" href="#/learn/exam/new?wrong=${list.map(w => w.id).join(',')}" onclick="examDraft.types={single:0,multiple:0,judge:0,blank:0,short:0,calc:0}">举一反三练习</a>` : ''}</div></div>`; return; }
+    if (i >= list.length) { if (!w_cele) { w_cele = true; Game.practiceDone(list.length, ok, list.length * 3, '错题复习完成！'); } v.innerHTML = `<div class="empty">${Game.doneIcon('var(--c-wrong)')}<h2>本轮复习完成</h2><p>共 ${list.length} 题，会了 ${ok} 题</p><div class="btns"><a class="btn plain" href="#/learn/wrong">返回</a>${AI.ready() ? `<a class="btn" href="#/learn/exam/new?wrong=${list.map(w => w.id).join(',')}" data-reset-types>举一反三练习</a>` : ''}</div></div>`; return; }
     const w = list[i];
     v.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div class="chips">${wrongChips(w)}</div><span class="small muted">${i + 1}/${list.length}</span></div><div class="progress"><i style="width:${i / list.length * 100}%"></i></div>
       <div class="q">${wrongQuestionHtml(w, reveal)}</div>

@@ -11,12 +11,32 @@ const AI_PRESETS = {
   openrouter: { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4o-mini', visionModel: 'openai/gpt-4o-mini', site: 'https://openrouter.ai/keys', note: '聚合多家模型。' },
   custom: { name: '自定义（OpenAI 兼容）', baseUrl: '', model: '', visionModel: '', site: '', note: '任何兼容 /chat/completions 且允许浏览器跨域（CORS）的服务。智谱 open.bigmodel.cn 经测试不允许浏览器直连。' }
 };
+// 只显示 Key 的首尾几位，用于确认填的是哪个 Key
+const maskKey = k => { k = String(k || '').trim(); return k.length <= 8 ? '••••' : k.slice(0, 3) + '••••' + k.slice(-4); };
 class AIError extends Error { constructor(msg, kind) { super(msg); this.kind = kind; } }
 const AI = {
   cfg() { return S.settings.ai; },
   ready() { const c = this.cfg(); return !!(c.apiKey && c.baseUrl && c.model); },
   visionReady() { const c = this.cfg(); return !!(c.apiKey && c.baseUrl && (c.visionModel || c.model)); },
-  url() { let b = this.cfg().baseUrl.trim().replace(/\/+$/, ''); if (/\/chat\/completions$/.test(b)) return b; return b + '/chat/completions'; },
+  // 接口地址校验：只允许 https://（本机调试可用 http://localhost / 127.0.0.1），且不能在地址里夹带账号密码
+  checkUrl(u) {
+    const b = String(u || '').trim(); if (!b) return '请填写接口地址';
+    let x; try { x = new URL(b); } catch (e) { return '接口地址格式不正确，应以 https:// 开头'; }
+    if (x.username || x.password) return '接口地址中不能包含账号或密码';
+    if (x.protocol === 'https:') return '';
+    if (x.protocol === 'http:' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(x.hostname)) return '';
+    return '为保护 API Key，接口地址必须使用 https://（明文 http 会让 Key 在网络中被窃听）';
+  },
+  // 从任何要展示的文字里抹掉 Key（以及看起来像 Key 的片段），防止出现在错误提示、截图里
+  redact(t) {
+    let s = String(t ?? ''); const k = (this.cfg()?.apiKey || '').trim();
+    if (k.length >= 4) s = s.split(k).join('***');
+    return s.replace(/Bearer\s+[^\s"',]+/gi, 'Bearer ***').replace(/\b(sk|ak|key)-[A-Za-z0-9_\-]{6,}/gi, '$1-***').replace(/AIza[0-9A-Za-z_\-]{20,}/g, 'AIza***');
+  },
+  url() {
+    const c = this.cfg(); const bad = this.checkUrl(c.baseUrl); if (bad) throw new AIError(bad + '。请到「我的 → 设置 → AI 设置」修改。', 'config');
+    let b = c.baseUrl.trim().replace(/\/+$/, ''); if (/\/chat\/completions$/.test(b)) return b; return b + '/chat/completions';
+  },
   async chat(messages, { json = false, signal, temperature = 0.4, model, maxTokens } = {}) {
     const c = this.cfg(); if (!this.ready()) throw new AIError('还没有配置 AI。请到「我的 → 设置 → AI 设置」填写接口地址、API Key 和模型名。', 'config');
     const body = { model: model || c.model, messages, temperature, stream: false };
@@ -26,9 +46,11 @@ const AI = {
     const ctl = new AbortController(); const to = setTimeout(() => ctl.abort('timeout'), 180000);
     if (signal) signal.addEventListener('abort', () => ctl.abort('user'));
     try {
-      res = await fetch(this.url(), { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + c.apiKey.trim() }, body: JSON.stringify(body), signal: ctl.signal });
+      // Key 只放在 Authorization 头里，直连用户配置的服务商；不带 Cookie、不发 Referer、不缓存、不跟随重定向（防止被转发到别的域名）
+      res = await fetch(this.url(), { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + c.apiKey.trim() }, body: JSON.stringify(body), signal: ctl.signal, credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store', redirect: 'error', mode: 'cors' });
     } catch (e) {
       clearTimeout(to);
+      if (e instanceof AIError) throw e;
       if (ctl.signal.aborted) throw new AIError(ctl.signal.reason === 'user' ? '已取消' : 'AI 响应超时（超过 3 分钟），请减少题量或内容后重试。', 'abort');
       if (!navigator.onLine) throw new AIError('当前没有网络连接，AI 功能需要联网使用。', 'offline');
       throw new AIError('无法连接 AI 服务。可能原因：\n① 该服务商不允许浏览器直接调用（CORS 跨域限制）——请换用设置中列出的已验证服务商（如 DeepSeek、硅基流动、通义千问、Kimi）；\n② 接口地址填写错误；\n③ 网络无法访问该服务（例如 OpenAI / Gemini 在中国大陆需特殊网络）。', 'cors');
@@ -41,7 +63,7 @@ const AI = {
         return this.chat(messages, { json: false, signal, temperature, model, maxTokens });
       }
       const map = { 401: 'API Key 无效或已过期（401），请检查设置。', 403: '没有权限访问该模型（403），请确认账号已开通该模型。', 402: '账户余额不足（402），请到服务商控制台充值。', 404: '接口地址或模型名不存在（404），请检查设置。', 429: '请求太频繁或额度用完（429），请稍后再试。' };
-      throw new AIError((map[res.status] || `AI 服务返回错误（${res.status}）`) + (em ? `\n详情：${String(typeof em === 'string' ? em : JSON.stringify(em)).slice(0, 300)}` : ''), 'http');
+      throw new AIError((map[res.status] || `AI 服务返回错误（${res.status}）`) + (em ? `\n详情：${this.redact(String(typeof em === 'string' ? em : JSON.stringify(em))).slice(0, 300)}` : ''), 'http');
     }
     const out = data?.choices?.[0]?.message?.content;
     if (out == null) throw new AIError('AI 返回内容为空或格式无法识别。', 'empty');
@@ -76,9 +98,9 @@ const AI = {
   }
 };
 function showAIError(e) {
-  const msg = e instanceof AIError ? e.message : ('出错了：' + (e?.message || e));
+  const msg = AI.redact(e instanceof AIError ? e.message : ('出错了：' + (e?.message || e)));
   if (e?.kind === 'abort' && e.message === '已取消') return toast('已取消');
-  openSheet(`<h2>😕 AI 调用失败</h2><div class="notice err pre">${esc(msg)}</div><div class="btns"><a class="btn plain" href="#/me/settings" onclick="closeSheet()">去设置</a><button class="btn" onclick="closeSheet()">知道了</button></div>`);
+  openSheet(`<h2>😕 AI 调用失败</h2><div class="notice err pre">${esc(msg)}</div><div class="btns"><a class="btn plain" href="#/me/settings" data-close-sheet>去设置</a><button class="btn" data-close-sheet>知道了</button></div>`);
 }
 async function withLoading(text, fn) {
   const ctl = new AbortController(); loading(true, text, ctl);
