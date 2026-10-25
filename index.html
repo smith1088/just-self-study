@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>学习工作台</title>
+<meta name="description" content="计划、笔记、卡片复习、番茄钟、统计、教材导入、AI 出卷、错题本——一站式学习工作台">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="学习台">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="v5.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <button id="backBtn" class="icon-btn hidden" aria-label="返回"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <h1 id="title">学习工作台</h1>
+    <div id="topActions"></div>
+  </header>
+  <main id="view" tabindex="-1"></main>
+  <nav id="tabbar" aria-label="主导航">
+    <a href="#/today" data-tab="today"><span class="ti"></span><span>今日</span></a>
+    <a href="#/plan" data-tab="plan"><span class="ti"></span><span>计划</span></a>
+    <a href="#/focus" data-tab="focus"><span class="ti"></span><span>专注</span></a>
+    <a href="#/learn" data-tab="learn"><span class="ti"></span><span>学习</span></a>
+    <a href="#/me" data-tab="me"><span class="ti"></span><span>我的</span></a>
+  </nav>
+</div>
+<div id="sheet" class="sheet hidden" role="dialog" aria-modal="true"><div class="sheet-backdrop"></div><div class="sheet-panel"><div class="sheet-grip"></div><div id="sheetBody"></div></div></div>
+<div id="toast" class="toast hidden"></div>
+<div id="loading" class="loading hidden"><div class="spinner"></div><div id="loadingText">处理中…</div><button id="loadingCancel" class="btn small ghost hidden">取消</button></div>
+<script src="vendor/katex/katex.min.js" defer></script>
+<script src="js/core.js" defer></script>
+<script src="js/icons.js" defer></script>
+<script src="js/tts.js" defer></script>
+<script src="js/plan.js" defer></script>
+<script src="js/notes.js" defer></script>
+<script src="js/fsrs.js" defer></script>
+<script src="js/cards.js" defer></script>
+<script src="js/focus.js" defer></script>
+<script src="js/ai.js" defer></script>
+<script src="js/books.js" defer></script>
+<script src="js/exam.js" defer></script>
+<script src="js/wrong.js" defer></script>
+<script src="js/analysis.js" defer></script>
+<script src="js/solve.js" defer></script>
+<script src="js/bank.js" defer></script>
+<script src="js/remind.js" defer></script>
+<script src="js/stats.js" defer></script>
+<script src="js/game.js" defer></script>
+<script src="js/main.js" defer></script>
+</body>
+</html>
