@@ -13,8 +13,8 @@ const MASCOT_LINES = {
 /* ---- 吉祥物「林遥学姐」：插画立绘（img/mascot/*.webp），5 种情绪：normal/happy/cheer/encourage/sleepy ---- */
 const MASCOT = {
   name: '林遥学姐', short: '学姐',
-  moods: ['normal', 'happy', 'cheer', 'encourage', 'sleepy'],
-  alt: { normal: '林遥学姐抱着平板微笑', happy: '林遥学姐开心地挥手', cheer: '林遥学姐握拳为你欢呼', encourage: '林遥学姐竖起大拇指鼓励你', sleepy: '林遥学姐困倦地打哈欠' },
+  moods: ['normal', 'happy', 'cheer', 'encourage', 'sleepy', 'shy', 'pout', 'gaze'],
+  alt: { normal: '林遥学姐抱着平板微笑', happy: '林遥学姐开心地挥手', cheer: '林遥学姐握拳为你欢呼', encourage: '林遥学姐竖起大拇指鼓励你', sleepy: '林遥学姐困倦地打哈欠', shy: '林遥学姐红着脸抱着平板', pout: '林遥学姐抱着胳膊鼓起脸', gaze: '林遥学姐托着下巴温柔地看着你' },
   src(m, face) { return `img/mascot/${m}${face ? '-face' : ''}.webp`; }
 };
 const Game = {

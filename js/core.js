@@ -36,7 +36,7 @@ const DB = {
   set(k, v) { return new Promise((res, rej) => { const tx = this.db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); },
   clear() { return new Promise((res) => { const tx = this.db.transaction('kv', 'readwrite'); tx.objectStore('kv').clear(); tx.oncomplete = () => res(); }); }
 };
-const COLLECTIONS = ['todos', 'notes', 'decks', 'cards', 'reviews', 'sessions', 'books', 'exams', 'wrongs', 'solves', 'banks', 'courses', 'events'];
+const COLLECTIONS = ['todos', 'notes', 'decks', 'cards', 'reviews', 'sessions', 'books', 'exams', 'wrongs', 'solves', 'banks', 'courses', 'events', 'chats', 'mems'];
 const DEFAULT_SETTINGS = {
   theme: 'auto',
   subjects: [
@@ -51,6 +51,7 @@ const DEFAULT_SETTINGS = {
   remind: { enabled: true, morning: '08:00', evening: '21:00', notify: true },
   ai: { preset: 'deepseek', baseUrl: 'https://api.deepseek.com', apiKey: '', model: 'deepseek-chat', visionModel: '', jsonMode: true, maxChars: 12000 },
   tt: { start: '', periods: [] },
+  lin: { romance: true, nick: '', tts: false, greet: true, pts: {} },
   name: ''
 };
 const S = { settings: null }; COLLECTIONS.forEach(c => S[c] = []);
@@ -200,7 +201,7 @@ function render() {
       try { currentCleanup = r.fn(v, ...m.slice(1).map(decodeURIComponent)) || null; }
       catch (e) { console.error(e); v.innerHTML = `<div class="notice err">页面出错：${esc(e.message)}</div>`; }
       const LT = { '/plan': 1, '/learn': 1, '/me': 1 }, isT = h === '/today';
-      document.body.classList.toggle('page-today', isT); document.body.classList.toggle('page-focus', h === '/focus'); document.body.classList.toggle('lt-page', !!(LT[h] || isT));
+      document.body.classList.toggle('page-today', isT); document.body.classList.toggle('page-focus', h === '/focus'); document.body.classList.toggle('page-chat', h === '/chat'); document.body.classList.toggle('lt-page', !!(LT[h] || isT));
       if (LT[h]) v.insertAdjacentHTML('afterbegin', `<h1 class="page-title">${esc($('#title').textContent)}</h1>`);
       requestAnimationFrame(onScrollTop);
       if (_animNext) { v.classList.add('enter'); _animNext = false; }

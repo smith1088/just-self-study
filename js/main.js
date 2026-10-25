@@ -29,7 +29,7 @@ route('/today', 'today', v => {
   <a class="card act7" href="#/me/achievements"><div class="a7-top"><div class="a7-ring">${Game.rings(R, 148)}<div class="a7-c"><b class="num">${pct}<small>%</small></b><span>今日</span></div></div>
     <div class="a7-vals">${R.map(r => `<div class="a7-v" style="--c:${r.c};--c2:${r.c2}"><div class="a7-k"><i></i>${r.k}</div><div class="a7-n num">${r.v}<span>/${r.g} ${r.u}</span></div></div>`).join('')}</div></div>
     <div class="a7-foot"><div><span>连续学习</span><b class="num">${sk}<small>天</small></b></div><div><span>等级</span><b class="num">Lv ${lv.lv}<small>${lv.title}</small></b></div><div><span>待复习</span><b class="num">${due}<small>张</small></b></div></div></a>
-  ${Game.vn({ mood: closed === 3 ? 'cheer' : Game.mood(), title: status, text: esc(Game.line()), cap: 'きょうの一言', cls: 'vn-today' })}
+  ${Game.vn({ mood: closed === 3 ? 'cheer' : Game.mood(), title: status, text: esc(Game.line()), cap: 'きょうの一言', cls: 'vn-today', actions: `<a class="vn-chat" href="#/chat" id="tdChat">${LIN_HEART}和学姐聊聊</a>` })}
   <div class="btns today-cta"><a class="btn big" href="#/focus">${icon('play', 17)} 开始专注</a><a class="btn big tinted" href="#/learn/review/all">${icon('cards', 17)} 复习卡片</a></div>
   ${secHead(`今日任务 <span class="sec-n">${qDone}/3</span>`)}
   <div class="list quests5">${quests.map(([ic, c, t, n, m, u, h]) => `<a class="row q5 ${n >= m ? 'done' : ''}" href="${h}"><span class="q5-r">${Game.rings([{ p: n / m, c }], 34)}<i style="color:${c}">${icon(n >= m ? 'check' : ic, 13)}</i></span><div class="grow"><div class="t">${t}</div><div class="s num">${n} / ${m} ${u}</div></div>${n >= m ? `<span class="q5-ok">已完成</span>` : '<span class="chev">›</span>'}</a>`).join('')}</div>
@@ -107,6 +107,7 @@ route('/me/settings', 'me', v => {
     <div class="row" style="padding:0;border:0;min-height:44px"><div class="grow"><div class="t">到点弹出系统通知</div><div class="s">仅在 App 打开或切回前台时触发</div></div><label class="switch"><input type="checkbox" id="rN" ${R.notify ? 'checked' : ''}><span></span></label></div>
     <div class="btns" style="margin-top:10px"><button class="btn plain" id="ntf">${'Notification' in window ? (Notification.permission === 'granted' ? '✅ 已允许通知' : '允许通知') : '不支持通知'}</button><button class="btn" id="ics">${icon('calendar', 18)} 添加到日历</button></div>
     <div class="small muted" style="margin-top:10px"><b>最可靠的方式是「添加到日历」</b>：会生成一个每天按上面时间重复的日历提醒（.ics），由 iPhone 日历负责准时响铃，即使 App 没打开也会提醒。网页 App 没有服务器，关闭后不能自己定时推送（详见「使用说明」）。改了时间后需重新添加。</div></div>
+  <h3>林遥学姐</h3><div class="list"><a class="row" href="#/chat?set=1" id="lnSet"><div class="grow"><div class="t">聊天、称呼、恋爱模式与记忆</div><div class="s">好感度 ${esc(Lin.level().name)} · 记得 ${S.mems.length} 件事</div></div><span class="chev">›</span></a></div>
   <h3>语音朗读</h3><div class="card">${TTS.ok ? `
     <label class="f"><span>语速 <b id="rtv">${T.rate.toFixed(1)}×</b></span><input type="range" id="tR" min="0.5" max="1.5" step="0.1" value="${T.rate}"></label>
     <div class="row" style="padding:0;border:0;min-height:44px"><div class="grow"><div class="t">卡片自动朗读</div><div class="s">复习时自动读出卡片正面</div></div><label class="switch"><input type="checkbox" id="tA" ${T.autoplay ? 'checked' : ''}><span></span></label></div>
@@ -330,6 +331,7 @@ async function boot() {
   matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => applyTheme());
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
   render(); Remind.init();
+  setTimeout(() => { if (/^#\/today|^$/.test(location.hash)) linDailyGreet(); }, 1400);
   if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e));
 }
 boot();

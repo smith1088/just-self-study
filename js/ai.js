@@ -47,14 +47,8 @@ const AI = {
     if (signal) signal.addEventListener('abort', () => ctl.abort('user'));
     try {
       // Key 只放在 Authorization 头里，直连用户配置的服务商；不带 Cookie、不发 Referer、不缓存、不跟随重定向（防止被转发到别的域名）
-      res = await fetch(this.url(), { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + c.apiKey.trim() }, body: JSON.stringify(body), signal: ctl.signal, credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store', redirect: 'error', mode: 'cors' });
-    } catch (e) {
-      clearTimeout(to);
-      if (e instanceof AIError) throw e;
-      if (ctl.signal.aborted) throw new AIError(ctl.signal.reason === 'user' ? '已取消' : 'AI 响应超时（超过 3 分钟），请减少题量或内容后重试。', 'abort');
-      if (!navigator.onLine) throw new AIError('当前没有网络连接，AI 功能需要联网使用。', 'offline');
-      throw new AIError('无法连接 AI 服务。可能原因：\n① 该服务商不允许浏览器直接调用（CORS 跨域限制）——请换用设置中列出的已验证服务商（如 DeepSeek、硅基流动、通义千问、Kimi）；\n② 接口地址填写错误；\n③ 网络无法访问该服务（例如 OpenAI / Gemini 在中国大陆需特殊网络）。', 'cors');
-    }
+      res = await fetch(this.url(), this.reqOpts(body, ctl.signal));
+    } catch (e) { clearTimeout(to); throw this.netErr(e, ctl); }
     clearTimeout(to);
     let text = await res.text(); let data = null; try { data = JSON.parse(text); } catch (e) { }
     if (!res.ok) {
@@ -62,12 +56,56 @@ const AI = {
       if (json && c.jsonMode && res.status === 400 && /response_format|json/i.test(String(em))) { // 不支持 JSON 模式，降级重试
         return this.chat(messages, { json: false, signal, temperature, model, maxTokens });
       }
-      const map = { 401: 'API Key 无效或已过期（401），请检查设置。', 403: '没有权限访问该模型（403），请确认账号已开通该模型。', 402: '账户余额不足（402），请到服务商控制台充值。', 404: '接口地址或模型名不存在（404），请检查设置。', 429: '请求太频繁或额度用完（429），请稍后再试。' };
-      throw new AIError((map[res.status] || `AI 服务返回错误（${res.status}）`) + (em ? `\n详情：${this.redact(String(typeof em === 'string' ? em : JSON.stringify(em))).slice(0, 300)}` : ''), 'http');
+      throw this.httpErr(res.status, em);
     }
     const out = data?.choices?.[0]?.message?.content;
     if (out == null) throw new AIError('AI 返回内容为空或格式无法识别。', 'empty');
     return Array.isArray(out) ? out.map(p => p.text || '').join('') : String(out);
+  },
+  // Key 只放在 Authorization 头里，直连用户配置的服务商；不带 Cookie、不发 Referer、不缓存、不跟随重定向（防止被转发到别的域名）
+  reqOpts(body, signal) {
+    return { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.cfg().apiKey.trim() }, body: JSON.stringify(body), signal, credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store', redirect: 'error', mode: 'cors' };
+  },
+  netErr(e, ctl) {
+    if (e instanceof AIError) return e;
+    if (ctl.signal.aborted) return new AIError(ctl.signal.reason === 'user' ? '已取消' : 'AI 响应超时，请稍后重试。', 'abort');
+    if (!navigator.onLine) return new AIError('当前没有网络连接，AI 功能需要联网使用。', 'offline');
+    return new AIError('无法连接 AI 服务。可能原因：\n① 该服务商不允许浏览器直接调用（CORS 跨域限制）——请换用设置中列出的已验证服务商（如 DeepSeek、硅基流动、通义千问、Kimi）；\n② 接口地址填写错误；\n③ 网络无法访问该服务（例如 OpenAI / Gemini 在中国大陆需特殊网络）。', 'cors');
+  },
+  httpErr(status, em) {
+    const map = { 401: 'API Key 无效或已过期（401），请检查设置。', 403: '没有权限访问该模型（403），请确认账号已开通该模型。', 402: '账户余额不足（402），请到服务商控制台充值。', 404: '接口地址或模型名不存在（404），请检查设置。', 429: '请求太频繁或额度用完（429），请稍后再试。' };
+    return new AIError((map[status] || `AI 服务返回错误（${status}）`) + (em ? `\n详情：${this.redact(String(typeof em === 'string' ? em : JSON.stringify(em))).slice(0, 300)}` : ''), 'http');
+  },
+  /** 流式对话（SSE）。onDelta(片段, 累计全文)；服务商不支持流式时自动按普通 JSON 解析 */
+  async stream(messages, { signal, temperature = 0.8, maxTokens, onDelta = () => { } } = {}) {
+    const c = this.cfg(); if (!this.ready()) throw new AIError('还没有配置 AI。请到「我的 → 设置 → AI 设置」填写接口地址、API Key 和模型名。', 'config');
+    const body = { model: c.model, messages, temperature, stream: true }; if (maxTokens) body.max_tokens = maxTokens;
+    const ctl = new AbortController(); let to = setTimeout(() => ctl.abort('timeout'), 90000);
+    if (signal) signal.addEventListener('abort', () => ctl.abort('user'));
+    let res; try { res = await fetch(this.url(), this.reqOpts(body, ctl.signal)); } catch (e) { clearTimeout(to); throw this.netErr(e, ctl); }
+    if (!res.ok) { clearTimeout(to); const t = await res.text().catch(() => ''); let d = null; try { d = JSON.parse(t); } catch (e) { } throw this.httpErr(res.status, d?.error?.message || d?.message || d?.error || t.slice(0, 200)); }
+    let full = '';
+    const take = obj => { const ch = obj?.choices?.[0]; const piece = ch?.delta?.content ?? ch?.message?.content ?? ''; const p = Array.isArray(piece) ? piece.map(x => x.text || '').join('') : String(piece || ''); if (p) { full += p; onDelta(p, full); } };
+    const handle = line => { line = line.trim(); if (!line.startsWith('data:')) return false; const d = line.slice(5).trim(); if (d === '[DONE]') return true; try { take(JSON.parse(d)); } catch (e) { } return false; };
+    try {
+      if (!res.body || !/event-stream/i.test(res.headers.get('content-type') || '')) {
+        const t = await res.text(); let d = null; try { d = JSON.parse(t); } catch (e) { }
+        if (d) take(d); else t.split('\n').forEach(handle);
+      } else {
+        const rd = res.body.getReader(); const dec = new TextDecoder(); let buf = '', done = false;
+        while (!done) {
+          const r = await rd.read(); if (r.done) break;
+          clearTimeout(to); to = setTimeout(() => ctl.abort('timeout'), 60000);
+          buf += dec.decode(r.value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop();
+          for (const l of lines) if (handle(l)) { done = true; break; }
+        }
+        if (buf) handle(buf);
+        try { rd.cancel(); } catch (e) { }
+      }
+    } catch (e) { clearTimeout(to); if (full && !ctl.signal.aborted) return full; throw this.netErr(e, ctl); }
+    clearTimeout(to);
+    if (!full) throw new AIError('AI 返回内容为空或格式无法识别。', 'empty');
+    return full;
   },
   parseJSON(text) {
     let t = String(text).trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
