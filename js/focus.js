@@ -72,27 +72,42 @@ const Focus = {
     const m = Math.floor(r / 60000), s = Math.floor(r % 60000 / 1000); el.textContent = `${pad2(m)}:${pad2(s)}`;
     const C = 2 * Math.PI * 140; const frac = this.st.totalMs ? r / this.st.totalMs : 0;
     const arc = $('#parc'); if (arc) arc.setAttribute('stroke-dashoffset', String(C * (1 - frac)));
+    const hd = $('#phead'); if (hd) { const a = 2 * Math.PI * frac; hd.setAttribute('cx', (150 + 140 * Math.cos(a)).toFixed(2)); hd.setAttribute('cy', (150 + 140 * Math.sin(a)).toFixed(2)); hd.style.opacity = frac > .002 ? 1 : 0; }
     if (this.st.running) document.title = `${pad2(m)}:${pad2(s)} ${PHASES[this.st.phase]} · 学习工作台`;
   }
 };
 route('/focus', 'focus', v => {
   const F = Focus, st = F.st, c = S.settings.pomo;
   setTop('番茄专注', { actions: `<button class="icon-btn txt" id="pset">设置</button>` });
-  const C = 2 * Math.PI * 140; const color = st.phase === 'focus' ? 'var(--pri)' : 'var(--ok)';
+  const C = 2 * Math.PI * 140;
   const t0 = startOfDay(); const today = S.sessions.filter(s => s.end >= t0).sort((a, b) => b.end - a.end); const tm = today.reduce((a, s) => a + s.minutes, 0);
   const todos = S.todos.filter(t => !t.done).sort(sortTodos).slice(0, 30);
-  v.innerHTML = `<div class="seg" id="ph">${Object.entries(PHASES).map(([k, l]) => `<button data-p="${k}" class="${st.phase === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-  <div class="timer-wrap"><div class="ring"><svg viewBox="0 0 300 300"><circle cx="150" cy="150" r="140" fill="none" stroke="var(--card2)" stroke-width="12"/><circle id="parc" cx="150" cy="150" r="140" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="0" style="transition:stroke-dashoffset .5s linear"/></svg>
-  <div class="time"><div class="big" id="ptime">--:--</div><div class="lbl">${PHASES[st.phase]}${st.phase === 'focus' ? ` · 第 ${(st.cycle || 0) % c.longEvery + 1}/${c.longEvery} 个` : ''}</div>${st.label ? `<div class="small muted" style="max-width:70%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(st.label)}</div>` : ''}</div></div></div>
-  <div class="btns" style="margin:14px 0">${st.running ? `<button class="btn plain" id="pause">暂停</button>` : `<button class="btn" id="start">${st.remainMs < st.totalMs ? '继续' : '开始'}</button>`}
-    ${st.phase === 'focus' && (st.running || st.remainMs < st.totalMs) ? `<button class="btn ghost" id="stop">结束并记录</button>` : `<button class="btn ghost" id="skip">${st.phase === 'focus' ? '跳到休息' : '跳过休息'}</button>`}
-    <button class="btn plain" id="reset" style="flex:0 0 auto;width:50px;padding:0" aria-label="重置">${icon('reset', 20)}</button></div>
-  <div class="card"><div class="grid2"><label class="f" style="margin:0"><span>科目</span><select id="psub">${subjOptions(st.subject)}</select></label>
+  const started = st.running || st.remainMs < st.totalMs;
+  const cap = { focus: '集中 · FOCUS', short: '小休憩 · BREAK', long: '長休憩 · REST' }[st.phase];
+  const sub = st.phase === 'focus' ? `第 ${(st.cycle || 0) % c.longEvery + 1} / ${c.longEvery} 个番茄` : st.phase === 'short' ? '站起来走走，看看远处' : '好好放松一下';
+  const intent = st.label || (st.todoId ? '' : '');
+  const mood = st.running ? (st.phase === 'focus' ? 'normal' : 'sleepy') : tm >= c.dailyGoal ? 'happy' : 'encourage';
+  const line = st.running ? (st.phase === 'focus' ? '专注中，我在旁边陪你。手机先放一边吧。' : '休息一下，喝口水，看看窗外。') : started ? '暂停了也没关系，准备好再继续。' : tm >= c.dailyGoal ? '今天的专注目标已经完成，真厉害。' : tm ? `今天已专注 ${fmtMin(tm)}，再来一个番茄？` : '准备好了就开始吧，25 分钟就好。';
+  if (!$('#frSky')) document.body.insertAdjacentHTML('afterbegin', `<div id="frSky" aria-hidden="true"><i class="fs-glow"></i><i class="fs-stars"></i>${Array.from({ length: 9 }, (_, i) => `<i class="fs-p" style="--x:${(i * 37 + 7) % 100}%;--d:${16 + (i * 7) % 11}s;--dl:-${(i * 5.3) % 17}s;--s:${.7 + (i % 3) * .2}"></i>`).join('')}</div>`);
+  v.innerHTML = `<div class="fr ph-${st.phase} ${st.running ? 'is-run' : ''}">
+  <div class="seg fr-seg" id="ph">${Object.entries(PHASES).map(([k, l]) => `<button data-p="${k}" class="${st.phase === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+  <div class="fr-timer"><svg viewBox="0 0 300 300" aria-hidden="true"><defs><linearGradient id="frg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="fr-g1"/><stop offset="1" class="fr-g2"/></linearGradient></defs>
+    <circle class="fr-tick" cx="150" cy="150" r="128" fill="none" stroke-width="1" stroke-dasharray="1 9.05"/>
+    <circle class="fr-track" cx="150" cy="150" r="140" fill="none" stroke-width="2"/>
+    <circle id="parc" cx="150" cy="150" r="140" fill="none" stroke="url(#frg)" stroke-width="3" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="0" style="transition:stroke-dashoffset .5s linear"/>
+    <circle id="phead" class="fr-head" cx="290" cy="150" r="5.5"/></svg>
+    <div class="fr-c"><div class="fr-cap">${cap}</div><div class="fr-time num" id="ptime">--:--</div><div class="fr-sub">${sub}</div>${intent ? `<div class="fr-int">「${esc(intent)}」</div>` : ''}</div></div>
+  <div class="fr-ctl"><button class="fr-ic" id="reset" aria-label="重置">${icon('reset', 20)}</button>
+    ${st.running ? `<button class="fr-main" id="pause">暂停</button>` : `<button class="fr-main" id="start">${started ? '继续' : st.phase === 'focus' ? '开始专注' : '开始休息'}</button>`}
+    ${st.phase === 'focus' && started ? `<button class="fr-ic" id="stop" aria-label="结束并记录">${icon('check', 20)}</button>` : `<button class="fr-ic" id="skip" aria-label="${st.phase === 'focus' ? '跳到休息' : '跳过休息'}">${icon('next', 20)}</button>`}</div>
+  <div class="fr-ctl-l"><span>重置</span><span></span><span>${st.phase === 'focus' && started ? '结束并记录' : st.phase === 'focus' ? '跳到休息' : '跳过休息'}</span></div>
+  ${Game.vn({ mood, text: line, art: 96, cap: st.running ? 'いっしょに' : 'せんぱい', cls: 'vn-focus' })}
+  <div class="card fr-card"><div class="fr-h">这一轮<em>今回の目標</em></div><div class="grid2"><label class="f" style="margin:0"><span>科目</span><select id="psub">${subjOptions(st.subject)}</select></label>
   <label class="f" style="margin:0"><span>关联计划</span><select id="ptodo"><option value="">不关联</option>${todos.map(t => `<option value="${t.id}" ${t.id === st.todoId ? 'selected' : ''}>${esc(t.title.slice(0, 20))}</option>`).join('')}</select></label></div>
   <label class="f" style="margin:10px 0 0"><span>专注内容（可选）</span><input type="text" id="plabel" value="${esc(st.label)}" placeholder="例如：背 50 个单词"></label></div>
-  <div class="card"><div style="display:flex;justify-content:space-between"><b>今日专注</b><span class="muted">${fmtMin(tm)} / 目标 ${fmtMin(c.dailyGoal)}</span></div><div class="progress"><i style="width:${Math.min(100, tm / c.dailyGoal * 100)}%;background:var(--ok)"></i></div>
-  ${today.length ? `<div style="margin-top:6px">${today.slice(0, 12).map(s => `<div class="row" style="padding:8px 0;min-height:0"><span class="dot" style="background:${subj(s.subject).color}"></span><div class="grow"><div class="small">${esc(s.label || subj(s.subject).name)}</div></div><span class="small muted">${fmtDateTime(s.start).split(' ')[1]} · ${s.minutes} 分钟${s.partial ? '（提前结束）' : ''}</span></div>`).join('')}</div>` : '<div class="small muted" style="margin-top:6px">今天还没有专注记录，开始第一个番茄吧</div>'}</div>
-  <p class="small muted" style="margin:4px">计时基于结束时间计算，切到其他应用或锁屏后回来时间依然准确；但 iOS 在锁屏/后台时无法播放提示音，建议专注时保持屏幕常亮（已自动尝试保持屏幕常亮）。</p>`;
+  <div class="card fr-card"><div class="fr-h">今日专注<em>今日の記録</em><span class="fr-tot num">${fmtMin(tm)}<small> / ${fmtMin(c.dailyGoal)}</small></span></div><div class="fr-bar"><i style="width:${Math.min(100, tm / c.dailyGoal * 100)}%"></i></div>
+  ${today.length ? `<div class="fr-list">${today.slice(0, 12).map(s => `<div class="fr-row"><span class="dot" style="background:${subj(s.subject).color}"></span><div class="grow">${esc(s.label || subj(s.subject).name)}</div><span class="num">${fmtDateTime(s.start).split(' ')[1]}</span><b class="num">${s.minutes}<small> 分钟</small></b>${s.partial ? '<em>提前</em>' : ''}</div>`).join('')}</div>` : '<div class="fr-empty">今天还没有专注记录，开始第一个番茄吧</div>'}</div>
+  <p class="fr-note">计时按结束时间计算，锁屏或切换应用后依然准确。iOS 后台无法播放提示音，专注时请保持屏幕常亮。</p></div>`;
   F.paint();
   $('#ph').onclick = e => { const b = e.target.closest('button'); if (!b || b.dataset.p === st.phase) return; if (st.running && !confirm('切换会重置当前计时，确定吗？')) return; F.setPhase(b.dataset.p); rerender(); };
   const st_ = $('#start'); if (st_) st_.onclick = () => { F.start(); rerender(); };

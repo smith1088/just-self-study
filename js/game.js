@@ -2,87 +2,21 @@
 /* ========== 游戏化：经验值 / 等级 / 连胜冻结 / 奖章 / 庆祝（v5 · Apple 风格呈现；吉祥物代码保留但不在界面显示） ========== */
 const LV_TITLES = ['萌新学徒', '求知新芽', '勤学小将', '学习新星', '知识探索者', '专注达人', '学霸预备', '学霸', '学术大佬', '学神'];
 const MASCOT_LINES = {
-  morning: ['早上好！今天也一起发芽吧 🌱', '新的一天，先来一个番茄？', '早起的人有经验值拿 ✨'],
-  normal: ['今天学一点，明天强一点', '一起把今日目标点亮吧！', '我在这儿陪你学 💚', '先完成一件小事，状态就来了'],
-  close: ['只差一点就达成今日目标啦！', '冲刺！目标就在眼前 🔥'],
-  done: ['今日目标达成！你太棒了 🎉', '火力全开的一天！继续保持', '今天的你闪闪发光 ✨'],
-  night: ['夜深了，复习几张卡就去休息吧 🌙', '早点睡，记忆会在梦里巩固哦'],
+  morning: ['早上好，先用一个番茄钟热热身吧。', '早起的你，记忆力正好。', '今天的第一件小事，我陪你完成。'],
+  normal: ['今天学一点，明天就强一点。', '先完成一件小事，状态就来了。', '我在这儿陪你，慢慢来。', '把今日目标一点点点亮吧。'],
+  close: ['只差一点就达成今日目标了。', '最后一小段，学姐帮你看着。'],
+  done: ['今日目标达成，真的很棒。', '今天很扎实，记得好好休息。', '保持这个节奏，期末不慌。'],
+  night: ['夜深了，复习几张卡就去睡吧。', '早点休息，记忆会在睡眠里巩固。'],
   encourage: ['没关系，这张已安排在稍后再次出现', '再看一眼解析，印象会更深', '失误是复习的一部分', '慢一点也没关系，继续', '已记下，下次会更熟练'],
   combo: { 3: '状态很好', 5: '势头正盛', 8: '非常专注', 10: '完美连击', 15: '无可挑剔' }
 };
-/* ---- 吉祥物「奶糖」：奶油色小猫 + 靛蓝围巾（原创 SVG，5 种情绪：normal/happy/cheer/encourage/sleepy） ---- */
-const MASCOT = (() => {
-let _u = 0;
-function face(mood, o) {
-  const { ex = 44, ey = 60, gap = 32, er = 7.6, D = '#2A2622', mx = 60, my = 76, id } = o;
-  const L = ex, R = ex + gap;
-  const open = (dy = 0) => `<g class="m-eyes">${[L, R].map(x => `<ellipse cx="${x}" cy="${ey + dy}" rx="${er}" ry="${er * 1.18}" fill="url(#${id}eye)"/><ellipse cx="${x + er * .3}" cy="${ey + dy - er * .45}" rx="${er * .36}" ry="${er * .42}" fill="#fff"/><circle cx="${x - er * .35}" cy="${ey + dy + er * .5}" r="${er * .16}" fill="#fff" opacity=".8"/>`).join('')}</g>`;
-  const arcs = `<g class="m-eyes">${[L, R].map(x => `<path d="M${x - er} ${ey + 2}q${er} -${er * 1.5} ${er * 2} 0" stroke="${D}" stroke-width="3.6" fill="none" stroke-linecap="round"/>`).join('')}</g>`;
-  const closed = `<g class="m-eyes">${[L, R].map(x => `<path d="M${x - er} ${ey}q${er} ${er * 1.1} ${er * 2} 0" stroke="${D}" stroke-width="3.2" fill="none" stroke-linecap="round"/>`).join('')}</g>`;
-  const eyes = mood === 'happy' || mood === 'cheer' ? arcs : mood === 'sleepy' ? closed : open(mood === 'encourage' ? -1 : 0);
-  const mouth = {
-    normal: `<path d="M${mx - 5} ${my}q2.5 3 5 0q2.5 3 5 0" stroke="${D}" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-    happy: `<path d="M${mx - 6} ${my - 1}q6 9 12 0z" fill="${D}"/><path d="M${mx - 3.4} ${my + 3.2}q3.4-2.6 6.8 0q-1.6 2-3.4 2t-3.4-2z" fill="#FF8396"/>`,
-    cheer: `<path d="M${mx - 8} ${my - 2}q8 13 16 0z" fill="${D}"/><path d="M${mx - 4.6} ${my + 4.4}q4.6-3.4 9.2 0q-2 2.8-4.6 2.8t-4.6-2.8z" fill="#FF8396"/>`,
-    encourage: `<path d="M${mx - 6} ${my - .5}q6 6 12 0" stroke="${D}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`,
-    sleepy: `<ellipse cx="${mx}" cy="${my + 1}" rx="2.6" ry="2.1" fill="${D}"/>`
-  }[mood];
-  return eyes + mouth;
-}
-function defs(id, c) {
-  return `<defs>
-  <radialGradient id="${id}fur" cx="38%" cy="30%" r="78%"><stop offset="0" stop-color="${c.f0}"/><stop offset=".62" stop-color="${c.f1}"/><stop offset="1" stop-color="${c.f2}"/></radialGradient>
-  <radialGradient id="${id}eye" cx="40%" cy="30%" r="80%"><stop offset="0" stop-color="#5A4A42"/><stop offset=".55" stop-color="#211A17"/><stop offset="1" stop-color="#0E0B0A"/></radialGradient>
-  <linearGradient id="${id}sc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c.s0}"/><stop offset="1" stop-color="${c.s1}"/></linearGradient>
-  <radialGradient id="${id}sh" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity=".18"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
-  <radialGradient id="${id}spec" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
-  <filter id="${id}soft" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="1.5" stdDeviation="1.6" flood-color="${c.shadow}" flood-opacity=".28"/></filter>
-  </defs>`;
-}
-function extras(mood, col = '#5E5CE6') {
-  if (mood === 'cheer') return `<g class="m-fx"><path d="M14 30l2.2 5.3 5.3 2.2-5.3 2.2-2.2 5.3-2.2-5.3-5.3-2.2 5.3-2.2z" fill="#FFB800"/><path d="M104 20l1.7 4 4 1.7-4 1.7-1.7 4-1.7-4-4-1.7 4-1.7z" fill="#FFB800"/><circle cx="108" cy="46" r="2.4" fill="${col}" opacity=".7"/></g>`;
-  if (mood === 'sleepy') return `<g class="m-fx" fill="${col}" font-family="-apple-system,ui-rounded,sans-serif" font-weight="700"><text x="92" y="30" font-size="13">z</text><text x="103" y="19" font-size="9" opacity=".7">z</text></g>`;
-  if (mood === 'encourage') return `<g class="m-fx"><path d="M101 33c-2.6-3.6-8-1.6-7 2.6.6 2.6 4 4.6 7 6.6 3-2 6.4-4 7-6.6 1-4.2-4.4-6.2-7-2.6z" fill="#FF5C7A"/></g>`;
-  return '';
-}
-function paws(mood, fill, y = 94) {
-  if (mood === 'cheer') return `<g class="m-arms"><ellipse cx="22" cy="66" rx="8" ry="10" transform="rotate(-30 22 66)" fill="${fill}"/><ellipse cx="98" cy="66" rx="8" ry="10" transform="rotate(30 98 66)" fill="${fill}"/></g>`;
-  if (mood === 'encourage') return `<g class="m-arms"><ellipse cx="36" cy="${y + 2}" rx="8" ry="6.5" fill="${fill}"/><ellipse cx="90" cy="80" rx="8" ry="9" transform="rotate(20 90 80)" fill="${fill}"/></g>`;
-  return `<g class="m-arms"><ellipse cx="44" cy="${y + 4}" rx="8.5" ry="6.5" fill="${fill}"/><ellipse cx="76" cy="${y + 4}" rx="8.5" ry="6.5" fill="${fill}"/></g>`;
-}
-function scarf(id, tail = true) {
-  return `<g filter="url(#${id}soft)"><path d="M30 84q30 13 60 0l1.5 7q-31.5 14-63 0z" fill="url(#${id}sc)"/>${tail ? `<path d="M76 88l9 18q-6 3-11 1l-5-16z" fill="url(#${id}sc)"/><path d="M76.5 92l7 13" stroke="#fff" stroke-opacity=".25" stroke-width="1.4"/>` : ''}<path d="M33 86q27 11 54 0" stroke="#fff" stroke-opacity=".32" stroke-width="1.4" fill="none"/></g>`;
-}
-function wrap(id, mood, size, cls, inner) {
-  return `<svg class="mascot m-${mood} ${cls}" width="${size}" height="${size}" viewBox="0 0 120 120" aria-hidden="true">${inner}</svg>`;
-}
-/* A: 奶糖 — 奶油色小猫 + 靛蓝围巾 */
-function cat(mood = 'normal', size = 120, cls = '') {
-  const id = 'mc' + (++_u); const c = { f0: '#FFFDF8', f1: '#FBEBD6', f2: '#E9C9A2', s0: '#7472F0', s1: '#4B49C8', shadow: '#5A3A1A' };
-  return wrap(id, mood, size, cls, defs(id, c) + `
-  <ellipse cx="60" cy="112" rx="30" ry="4.5" fill="url(#${id}sh)"/>
-  <g class="m-body">
-   <path d="M86 100q20 2 18-16q-1-6-5-4q2 12-13 13z" fill="#EBCDA8"/>
-   <ellipse cx="60" cy="98" rx="27" ry="15" fill="url(#${id}fur)"/>
-   ${mood === 'cheer' || mood === 'encourage' ? '' : paws(mood, '#FFF8EE')}
-   <g class="m-head">
-    <path d="M24 46L26 16q1-6 6-3l22 16z" fill="url(#${id}fur)" stroke="#F3DDC0" stroke-width="3" stroke-linejoin="round"/><path d="M96 46L94 16q-1-6-6-3L66 29z" fill="url(#${id}fur)" stroke="#F3DDC0" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M30 36l1.5-15 12 9z" fill="#FFB3C1" opacity=".75"/><path d="M90 36l-1.5-15-12 9z" fill="#FFB3C1" opacity=".75"/>
-    <ellipse cx="60" cy="58" rx="41" ry="34" fill="url(#${id}fur)"/>
-    <path d="M54 26q1 6 0 9M60 25v10M66 26q-1 6 0 9" stroke="#E2B98A" stroke-width="2.6" stroke-linecap="round" opacity=".75"/>
-    <ellipse cx="44" cy="37" rx="15" ry="8" fill="url(#${id}spec)" opacity=".8"/>
-    <ellipse cx="60" cy="74" rx="14" ry="9.5" fill="#FFFFFF" opacity=".75"/>
-    <ellipse cx="33" cy="70" rx="6.5" ry="4" fill="#FF9CB0" opacity=".45"/><ellipse cx="87" cy="70" rx="6.5" ry="4" fill="#FF9CB0" opacity=".45"/>
-    <path d="M57.6 69.5h4.8q1.4 0 .6 1.2l-2 2.3q-1 1-2 0l-2-2.3q-.8-1.2.6-1.2z" fill="#F07D93"/>
-    <path d="M20 66l-9-1.5M20 71l-8 2M100 66l9-1.5M100 71l8 2" stroke="#D8B48E" stroke-width="1.4" stroke-linecap="round"/>
-    ${face(mood, { id, ex: 43, ey: 60, gap: 34, er: 6.8, mx: 60, my: 76 })}
-   </g>
-   ${scarf(id)}
-   ${mood === 'cheer' ? `<g class="m-arms"><ellipse cx="17" cy="56" rx="7.5" ry="9.5" transform="rotate(-25 17 56)" fill="#FFF6EA" stroke="#EBCDA8" stroke-width="1.2"/><ellipse cx="103" cy="56" rx="7.5" ry="9.5" transform="rotate(25 103 56)" fill="#FFF6EA" stroke="#EBCDA8" stroke-width="1.2"/></g>` : mood === 'encourage' ? `<g class="m-arms"><ellipse cx="44" cy="99" rx="8.5" ry="6.5" fill="#FFF8EE" stroke="#EBCDA8" stroke-width="1"/><g class="m-wave"><ellipse cx="103" cy="58" rx="7.5" ry="9.5" transform="rotate(25 103 58)" fill="#FFF6EA" stroke="#EBCDA8" stroke-width="1.2"/></g></g>` : ''}
-  </g>${extras(mood)}`);
-}
-  return { name: '奶糖', svg: cat };
-})();
+/* ---- 吉祥物「林遥学姐」：插画立绘（img/mascot/*.webp），5 种情绪：normal/happy/cheer/encourage/sleepy ---- */
+const MASCOT = {
+  name: '林遥学姐', short: '学姐',
+  moods: ['normal', 'happy', 'cheer', 'encourage', 'sleepy'],
+  alt: { normal: '林遥学姐抱着平板微笑', happy: '林遥学姐开心地挥手', cheer: '林遥学姐握拳为你欢呼', encourage: '林遥学姐竖起大拇指鼓励你', sleepy: '林遥学姐困倦地打哈欠' },
+  src(m, face) { return `img/mascot/${m}${face ? '-face' : ''}.webp`; }
+};
 const Game = {
   g() {
     const m = S.meta || (S.meta = {});
@@ -151,8 +85,8 @@ const Game = {
     const B = (id, name, desc, ic, c, v, max, sh, m, n = '') => ({ id, name, desc, ic, c, v: Math.min(v, max), max, got: v >= max, sh, m, e: c, n });
     return [
       B('first', '第一步', '完成第一次专注', 'sparkle', '#30D158', S.sessions.length, 1, 'circle', 'silver'),
-      B('pomo10', '十个番茄', '完成 10 个番茄', 'tomato', '#FF375F', pomos, 10, 'hex', 'silver', '10'),
-      B('pomo100', '百个番茄', '完成 100 个番茄', 'tomato', '#FF375F', pomos, 100, 'hex', 'gold', '100'),
+      B('pomo10', '十个番茄', '完成 10 个番茄', 'tomato', '#E8678F', pomos, 10, 'hex', 'silver', '10'),
+      B('pomo100', '百个番茄', '完成 100 个番茄', 'tomato', '#E8678F', pomos, 100, 'hex', 'gold', '100'),
       B('h10', '十小时专注', '累计专注 10 小时', 'clock', '#0A84FF', Math.floor(min / 60), 10, 'circle', 'silver', '10h'),
       B('h50', '心流大师', '累计专注 50 小时', 'focus', '#BF5AF2', Math.floor(min / 60), 50, 'octa', 'gold', '50h'),
       B('s3', '三日连续', '连续学习 3 天', 'flame', '#FF9F0A', best, 3, 'shield', 'bronze', '3'),
@@ -201,7 +135,7 @@ const Game = {
     const h = new Date().getHours(); const t = this.today(), goal = this.goal();
     if (t >= goal) return 'happy';
     if (h >= 23 || h < 5) return 'sleepy';
-    return t > 0 ? 'normal' : 'normal';
+    return t >= goal * 0.7 ? 'encourage' : 'normal';
   },
   line() {
     const h = new Date().getHours(); const t = this.today(), goal = this.goal(); const pick = a => a[(new Date().getDate() + h) % a.length];
@@ -211,8 +145,15 @@ const Game = {
     if (h < 10) return pick(MASCOT_LINES.morning);
     return pick(MASCOT_LINES.normal);
   },
-  mascot(mood = 'normal', size = 96, cls = '') { const m = { sad: 'encourage', cheering: 'cheer', encouraging: 'encourage' }[mood] || mood; return MASCOT.svg(['normal', 'happy', 'cheer', 'encourage', 'sleepy'].includes(m) ? m : 'normal', size, cls); },
-  /* ---- 反馈（v5：毛玻璃提示 + 奶糖） ---- */
+  /** 吉祥物：size ≤ 96 用圆形头像，否则用透明底半身立绘；opts.cut 强制立绘、opts.ring 头像描边 */
+  mascot(mood = 'normal', size = 96, cls = '', opts = {}) {
+    let m = { sad: 'encourage', cheering: 'cheer', encouraging: 'encourage' }[mood] || mood; if (!MASCOT.moods.includes(m)) m = 'normal';
+    const face = !opts.cut && size <= 96; const alt = MASCOT.alt[m];
+    return face
+      ? `<span class="pal-av m-${m} ${cls}" style="--s:${size}px"><img src="${MASCOT.src(m, true)}" alt="${alt}" width="${size}" height="${size}" decoding="async" loading="lazy" draggable="false"></span>`
+      : `<span class="pal-cut m-${m} ${cls}" style="--s:${size}px"><img src="${MASCOT.src(m)}" alt="${alt}" width="${size}" height="${size}" decoding="async" loading="lazy" draggable="false"></span>`;
+  },
+  /* ---- 反馈（毛玻璃提示 + 林遥学姐） ---- */
   buzz(ms = 8) { try { if (navigator.vibrate && !matchMedia('(prefers-reduced-motion: reduce)').matches) navigator.vibrate(ms); } catch (e) { } },
   _combo: 0,
   combo(ok) {
@@ -232,7 +173,7 @@ const Game = {
     $('#mbub')?.remove(); const el = document.createElement('div'); el.id = 'mbub'; el.className = 'mbub';
     const K = { sad: ['repeat', 'var(--c-wrong)'], ice: ['snow', 'var(--c-ice)'], xp: ['sparkle', 'var(--c-xp)'], happy: ['sparkle', 'var(--c-xp)'] }[kind] || ['sparkle', 'var(--c-xp)'];
     const pal = kind === 'sad' ? 'encourage' : kind === 'happy' ? 'happy' : kind === 'ice' ? 'normal' : '';
-    el.innerHTML = `${pal ? `<span class="mb-pal">${this.mascot(pal, 40)}</span>` : `<span class="mb-ic" style="--c:${K[1]}">${icon(K[0], 16)}</span>`}<div class="mb-t">${esc(text)}</div>`; document.body.appendChild(el);
+    el.innerHTML = `${pal ? this.mascot(pal, 36, 'mb-pal') : `<span class="mb-ic" style="--c:${K[1]}">${icon(K[0], 16)}</span>`}<div class="mb-t">${esc(text)}</div>`; document.body.appendChild(el);
     el.onclick = () => el.remove(); setTimeout(() => el.classList.add('out'), ms); setTimeout(() => el.remove(), ms + 400);
   },
   xpPop(n, label = '') { if (!n) return; this.bubble(`+${n} XP ${label}`.trim(), 'xp', 1800); },
@@ -274,31 +215,33 @@ const Game = {
       ${glyph}</svg>`;
   },
   /* ---- 活动圆环（Fitness 风格同心圆环，超额会叠圈） ---- */
-  rings(items, size = 132) {
-    const w = size * .118, gap = size * .014, cx = size / 2; let out = '';
+  /** v7 活动圆环：细描边 + 渐变 + 柔光，无箭头。items: {c, c2, p} */
+  _rgN: 0,
+  rings(items, size = 132, opts = {}) {
+    const w = opts.w || size * (size < 64 ? .13 : .072), gap = size * (size < 64 ? .03 : .036), cx = size / 2, uid = 'rg' + (++this._rgN), glow = size >= 100; let defs = glow ? `<filter id="${uid}-f" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${(size / 46).toFixed(2)}"/></filter>` : '', out = '';
     items.forEach((it, i) => {
-      const r = cx - w / 2 - i * (w + gap); const C = 2 * Math.PI * r; const p = Math.max(0, it.p || 0);
-      out += `<circle cx="${cx}" cy="${cx}" r="${r}" fill="none" style="stroke:${it.c};opacity:.22" stroke-width="${w}"/>`;
-      if (p > 0) {
-        const f = Math.min(p, 1);
-        out += `<circle class="rg-a" cx="${cx}" cy="${cx}" r="${r}" fill="none" style="stroke:${it.c};--L:${(C * f).toFixed(2)}px;--C:${C.toFixed(2)}px;animation-delay:${i * 90}ms" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${(C * f).toFixed(2)} ${C.toFixed(2)}" transform="rotate(-90 ${cx} ${cx})"/>`;
-        if (p > 1) {
-          const f2 = Math.min(p - 1, .98); const a = (f2 * 360 - 90) * Math.PI / 180;
-          out += `<circle class="rg-a" cx="${cx}" cy="${cx}" r="${r}" fill="none" style="stroke:${it.c};filter:brightness(1.12);--L:${(C * f2).toFixed(2)}px;--C:${C.toFixed(2)}px;animation-delay:${i * 90 + 500}ms" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${(C * f2).toFixed(2)} ${C.toFixed(2)}" transform="rotate(-90 ${cx} ${cx})"/>`;
-          out += `<circle class="rg-tip" cx="${(cx + r * Math.cos(a)).toFixed(2)}" cy="${(cx + r * Math.sin(a)).toFixed(2)}" r="${w / 2}" style="fill:${it.c}"/>`;
-        }
-      }
-      const ay = cx - r; out += `<path d="M${cx - w * .16} ${ay - w * .22}l${w * .26} ${w * .22}l-${w * .26} ${w * .22}" fill="none" stroke="#000" stroke-opacity=".7" stroke-width="${w * .14}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const r = cx - w / 2 - 2 - i * (w + gap); const C = 2 * Math.PI * r; const p = Math.max(0, it.p || 0); const c2 = it.c2 || it.c; const id = `${uid}-${i}`;
+      defs += `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${cx}" y1="0" x2="${cx * .35}" y2="${size}"><stop offset="0" style="stop-color:${c2}"/><stop offset="1" style="stop-color:${it.c}"/></linearGradient>`;
+      out += `<circle cx="${cx}" cy="${cx}" r="${r}" fill="none" class="rg-tr" style="stroke:${it.c}" stroke-width="${w}"/>`;
+      const arc = (f, d, extra = '') => (glow ? arc0(f, d, ' rg-gl', ` filter="url(#${uid}-f)"`) : '') + arc0(f, d, extra, '');
+      const arc0 = (f, d, extra, fl) => `<circle${fl} class="rg-a${extra}" cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="url(#${id})" style="--rc:${it.c};--L:${(C * f).toFixed(2)}px;--C:${C.toFixed(2)}px;animation-delay:${d}ms" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${(C * f).toFixed(2)} ${C.toFixed(2)}" transform="rotate(-90 ${cx} ${cx})"/>`;
+      if (p > 0) { out += arc(Math.max(Math.min(p, 1), .012), i * 90); if (p > 1) out += arc(Math.min(p - 1, .98), i * 90 + 500, ' rg-2'); }
     });
-    return `<svg class="act-rings" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">${out}</svg>`;
+    return `<svg class="act-rings" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true"><defs>${defs}</defs>${out}</svg>`;
   },
   ringItems() {
     const tm = Focus.todayMinutes(), fg = S.settings.pomo.dailyGoal || 120, rv = Stats.reviewsSince(startOfDay()), xp = this.today(), xg = this.goal();
     return [
-      { k: '专注', v: tm, g: fg, u: '分钟', c: 'var(--c-focus)', p: tm / fg },
-      { k: '复习', v: rv, g: 20, u: '张', c: 'var(--c-cards)', p: rv / 20 },
-      { k: '经验', v: xp, g: xg, u: 'XP', c: 'var(--c-xp)', p: xp / xg }
+      { k: '专注', v: tm, g: fg, u: '分钟', c: 'var(--c-focus)', c2: 'var(--c-focus2)', p: tm / fg },
+      { k: '复习', v: rv, g: 20, u: '张', c: 'var(--c-cards)', c2: 'var(--c-cards2)', p: rv / 20 },
+      { k: '经验', v: xp, g: xg, u: 'XP', c: 'var(--c-xp)', c2: 'var(--c-xp2)', p: xp / xg }
     ];
+  },
+  /** v7 视觉小说对话框：{mood, text, title, actions, layout:'side'|'stack', art, cap} */
+  vn(o = {}) {
+    const lay = o.layout || 'side', art = o.art || (lay === 'stack' ? 132 : 112);
+    const spark = `<svg class="vn-spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5c.5 5.6 4.9 10 10.5 10.5-5.6.5-10 4.9-10.5 10.5C11.5 16.9 7.1 12.5 1.5 12 7.1 11.5 11.5 7.1 12 1.5z"/></svg>`;
+    return `<div class="vn vn-${lay} ${o.cls || ''}">${o.mood !== false ? `<div class="vn-art">${this.mascot(o.mood || 'normal', art, '', { cut: true })}</div>` : ''}<div class="vn-box">${spark}<span class="vn-name">${MASCOT.name}<em>${o.cap || 'せんぱい'}</em></span>${o.title ? `<div class="vn-t">${o.title}</div>` : ''}${o.text ? `<p class="vn-p">${o.text}</p>` : ''}${o.actions ? `<div class="vn-act">${o.actions}</div>` : ''}<i class="vn-next" aria-hidden="true"></i></div></div>`;
   },
   /* ---- 健康 App 风格「亮点」洞察 ---- */
   insights() {
@@ -333,7 +276,7 @@ const Game = {
     const lv = this.level();
     const hero = o.hero === 'rings' ? `<div class="cele-rings">${this.rings(this.ringItems(), 176)}</div>` : this.medal(o.medal || { sh: 'circle', m: 'silver', e: '#5E5CE6', ic: 'sparkle', got: true }, 176, 'cele-medal');
     el.innerHTML = `<canvas class="glints"></canvas><div class="cele-in">
-      <div class="cele-hero"><div class="cele-glow" style="--g:${(o.medal && o.medal.e) || '#5E5CE6'}"></div>${hero}<div class="cele-pal">${this.mascot(o.mood === 'happy' ? 'happy' : 'cheer', 78)}</div></div>
+      <div class="cele-hero"><div class="cele-glow" style="--g:${(o.medal && o.medal.e) || '#5E5CE6'}"></div>${hero}${this.mascot(o.mood === 'happy' ? 'happy' : 'cheer', 128, 'cele-pal', { cut: true })}</div>
       ${o.kicker ? `<div class="cele-k">${esc(o.kicker)}</div>` : ''}
       <h1 class="cele-t">${esc((o.title || '完成').replace(/！$/, ''))}</h1>${o.sub ? `<p class="cele-s">${esc(o.sub)}</p>` : ''}
       ${o.stats?.length ? `<div class="cele-stats">${o.stats.map((s, i) => `<div class="cs" style="--c:${s.c};--d:${i * 90 + 600}ms"><div class="cs-h">${esc(s.l)}</div><div class="cs-v">${s.v}${s.u ? `<small>${esc(s.u)}</small>` : ''}</div></div>`).join('')}</div>` : ''}
@@ -363,7 +306,7 @@ const Game = {
   /* ---- 场景化庆祝 ---- */
   focusDone(min) {
     this.resetCombo();
-    this.after({ kicker: '专注完成', title: `${min} 分钟深度专注`, sub: '专注时间已计入今日活动圆环。', medal: { sh: 'circle', m: 'silver', e: '#FF375F', ic: 'tomato', got: true }, stats: [{ l: '经验', v: `+${min}`, u: 'XP', c: 'var(--c-xp)' }, { l: '专注', v: min, u: '分钟', c: 'var(--c-focus)' }, { l: '连续', v: this.streak(), u: '天', c: 'var(--c-streak)' }] });
+    this.after({ kicker: '专注完成', title: `${min} 分钟深度专注`, sub: '专注时间已计入今日活动圆环。', medal: { sh: 'circle', m: 'silver', e: '#E8678F', ic: 'tomato', got: true }, stats: [{ l: '经验', v: `+${min}`, u: 'XP', c: 'var(--c-xp)' }, { l: '专注', v: min, u: '分钟', c: 'var(--c-focus)' }, { l: '连续', v: this.streak(), u: '天', c: 'var(--c-streak)' }] });
   },
   reviewDone(n, ok, mins) {
     if (!n) return; this.resetCombo(); const pct = Math.round(ok / n * 100);
@@ -377,7 +320,7 @@ const Game = {
     if (!n) return; this.resetCombo(); const pct = Math.round(ok / n * 100);
     this.after({ kicker: '练习完成', title: title.replace(/！$/, ''), sub: pct >= 80 ? '正确率很高，继续保持。' : '错的题已经帮你记下了。', medal: { sh: 'hex', m: 'silver', e: '#40C8E0', ic: 'target', got: true }, stats: [{ l: '经验', v: `+${xp}`, u: 'XP', c: 'var(--c-xp)' }, { l: '题数', v: n, u: '题', c: 'var(--c-focus)' }, { l: '正确率', v: pct, u: '%', c: 'var(--c-cards)' }] });
   },
-  doneIcon(c = 'var(--c-cards)') { return `<div class="done-ic" style="--c:${c}">${icon('check', 34)}</div>`; }
+  doneIcon(c = 'var(--c-cards)') { return `<div class="done-pal" style="--c:${c}">${this.mascot('cheer', 168, '', { cut: true })}<span class="done-badge">${icon('check', 18)}</span></div>`; }
 };
 
 /* ---- 迷你图表：Screen Time / 健康 风格（细柱 + 平均虚线） ---- */
@@ -407,6 +350,7 @@ route('/me/achievements', 'me', v => {
   const xpVals = [...Array(7)].map((_, i) => map[dayKey(startOfDay() - (6 - i) * DAY)] || 0); const xpLab = [...Array(7)].map((_, i) => WEEK[new Date(startOfDay() - (6 - i) * DAY).getDay()]);
   const when = b => { const s = g.seen?.[b.id]; return s > 1 ? fmtDate(s) : '已获得'; };
   v.innerHTML = `<div class="card lv-hero">${Game.medal(Game.lvMedal(lv.lv), 76)}<div class="grow"><div class="eyebrow-g">等级</div><div class="lv-title">Lv ${lv.lv} · ${lv.title}</div><div class="xpbar"><i style="width:${Math.round(lv.pct * 100)}%"></i></div><div class="lv-sub"><span class="num">${lv.xp.toLocaleString()} XP</span><span>距 Lv ${lv.lv + 1} 还差 <b class="num">${lv.left}</b></span></div></div></div>
+  ${Game.vn({ mood: got.length >= bs.length / 2 ? 'happy' : 'encourage', text: `${near[0] ? `「${esc(near[0].name)}」已完成 ${Math.round(near[0].v / near[0].max * 100)}%，下一枚就快到手了。` : '所有奖章都集齐了，太厉害了。'}`, art: 100, cap: 'つぎの目標', cls: 'vn-ach' })}
   ${secHead('连续学习')}
   <div class="card streak5"><div class="s5-top"><div><div class="s5-k">当前连续</div><div class="s5-v num" style="color:var(--c-streak)">${st}<small>天</small></div></div><div class="s5-best"><div class="s5-k">最长纪录</div><div class="s5-v sm num">${best}<small>天</small></div></div></div>${weekDots(Game.week())}
     <div class="s5-fz"><span class="ic-tile" style="--c:var(--c-ice)">${icon('snow', 17)}</span><div class="grow"><div class="t">冻结卡 <span class="num">${g.freezes || 0}</span>/2</div><div class="s">每连续学习 7 天获得 1 张。漏学一天会自动使用，保住连续天数。</div></div></div></div>

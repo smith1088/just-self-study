@@ -44,12 +44,18 @@ const ICONS = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   trash: '<path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13.5h10L18 7"/>',
   play: '<path d="M7 4.5v15l12-7.5z"/>',
+  next: '<path d="M6 5.5v13l9.5-6.5z"/><path d="M18.5 5.5v13"/>',
   tomato: '<path d="M12 7.5c-4.7 0-8 2.9-8 6.6S7.3 21 12 21s8-3.2 8-6.9-3.3-6.6-8-6.6z"/><path d="M12 7.5V4M9 5.5c1 .8 2 1.5 3 2 1-.5 2-1.2 3-2M9.5 9c1 .7 1.8.9 2.5.9s1.5-.2 2.5-.9"/>',
   formula: '<path d="M17.5 4.5H7l6 7.5-6 7.5h10.5"/>',
   layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>'
 };
 function icon(name, size = 22, cls = '') { return `<svg class="i ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.info}</svg>`; }
 // 统一的空状态
-function emptyState(ic, title, desc = '', actions = '') { return `<div class="empty-state"><div class="es-ic">${icon(ic, 30)}</div><div class="es-t">${esc(title)}</div>${desc ? `<div class="es-d">${desc}</div>` : ''}${actions ? `<div class="btns" style="margin-top:14px;justify-content:center">${actions}</div>` : ''}</div>`; }
+function emptyState(ic, title, desc = '', actions = '') {
+  const act = actions ? `<div class="btns es-btns">${actions}</div>` : '';
+  if (typeof Game === 'undefined' || !Game.vn) return `<div class="empty-state"><div class="es-t">${esc(title)}</div>${desc ? `<div class="es-d">${desc}</div>` : ''}${act}</div>`;
+  const mood = { wrong: 'encourage', check: 'happy', trophy: 'cheer' }[ic] || 'normal';
+  return `<div class="empty-state es7">${Game.vn({ mood, layout: 'stack', title: esc(title), text: desc, art: 124, cap: 'ひとこと' })}${act}</div>`;
+}
 // 彩色图标块（tile / 列表用）
 function iconTile(name, color, size = 20) { return `<span class="ic-tile" style="--c:${color}">${icon(name, size)}</span>`; }

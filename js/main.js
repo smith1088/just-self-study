@@ -18,15 +18,17 @@ route('/today', 'today', v => {
   const quests = [['focus', 'var(--c-focus)', '专注 25 分钟', Math.min(tm, 25), 25, '分钟', '#/focus'], ['cards', 'var(--c-cards)', '复习 20 张卡片', Math.min(revToday, 20), 20, '张', '#/learn/review/all'], ['check', 'var(--c-plan)', '完成 3 项计划', Math.min(doneToday, 3), 3, '项', '#/plan']];
   const qDone = quests.filter(q => q[3] >= q[4]).length;
   const ins = Game.insights();
+  const pct = Math.round(R.reduce((a, r) => a + Math.min(1, r.p || 0), 0) / R.length * 100);
   const status = closed === 3 ? '三个圆环全部合拢，今天很出色。' : closed ? `已合拢 ${closed} 个圆环，再接再厉。` : Game.studiedToday() ? '今天已开始学习，继续保持。' : '从一次 25 分钟的专注开始今天。';
-  v.innerHTML = `<header class="t5-head"><div><div class="t5-date">${d.getMonth() + 1}月${d.getDate()}日 星期${WEEK[d.getDay()]}</div><h2 class="large-title">${greet()}${S.settings.name ? '，' + esc(S.settings.name) : ''}</h2></div><a class="t5-av" href="#/me" aria-label="我的">${esc((S.settings.name || '学').slice(0, 1))}</a></header>
+  v.innerHTML = `<header class="t5-head"><div><div class="t5-date">${d.getMonth() + 1}月${d.getDate()}日 星期${WEEK[d.getDay()]}<span class="t5-jp">${'日月火水木金土'[d.getDay()]}曜日</span></div><h2 class="large-title">${greet()}${S.settings.name ? '，' + esc(S.settings.name) : ''}</h2></div><a class="t5-av" href="#/me" aria-label="我的">${esc((S.settings.name || '学').slice(0, 1))}</a></header>
   ${isIOS() && !isStandalone() && !S.meta.hideInstall ? `<div class="notice info" id="inst"><b>添加到主屏幕</b>：点 Safari 底部的「分享」按钮，选择「添加到主屏幕」，即可像 App 一样全屏使用、离线可用。<button class="btn small plain" id="hideInst" style="margin-top:8px">不再提示</button></div>` : ''}
   ${Remind.bannerHtml()}
   ${st.running ? `<a class="card focus-live" href="#/focus">${icon('focus', 28)}<div style="flex:1"><b>${PHASES[st.phase]}进行中</b><div class="small" style="opacity:.9">${esc(st.label || subj(st.subject).name)}</div></div><b id="tdTime" class="mono" style="font-size:24px"></b></a>` : ''}
   ${secHead('活动', '#/me/stats')}
-  <a class="card act" href="#/me/achievements"><div class="act-top"><div class="act-vals">${R.map(r => `<div class="av"><div class="av-k">${r.k}</div><div class="av-v num" style="color:${r.c}">${r.v}<span class="av-g">/${r.g}</span><small>${r.u}</small></div></div>`).join('')}</div><div class="act-r">${Game.rings(R, 136)}</div></div>
-    <div class="act-foot"><div><div class="av-k">连续学习</div><div class="af-v num">${sk}<small>天</small></div></div><div><div class="av-k">等级</div><div class="af-v num">Lv ${lv.lv}<small>${lv.title}</small></div></div><div><div class="av-k">待复习</div><div class="af-v num">${due}<small>张</small></div></div></div>
-    <div class="act-note"><span class="pal">${Game.mascot(closed === 3 ? 'cheer' : Game.mood(), 44)}</span><div><b>${MASCOT.name}</b><span>${status}</span></div></div></a>
+  <a class="card act7" href="#/me/achievements"><div class="a7-top"><div class="a7-ring">${Game.rings(R, 148)}<div class="a7-c"><b class="num">${pct}<small>%</small></b><span>今日</span></div></div>
+    <div class="a7-vals">${R.map(r => `<div class="a7-v" style="--c:${r.c};--c2:${r.c2}"><div class="a7-k"><i></i>${r.k}</div><div class="a7-n num">${r.v}<span>/${r.g} ${r.u}</span></div></div>`).join('')}</div></div>
+    <div class="a7-foot"><div><span>连续学习</span><b class="num">${sk}<small>天</small></b></div><div><span>等级</span><b class="num">Lv ${lv.lv}<small>${lv.title}</small></b></div><div><span>待复习</span><b class="num">${due}<small>张</small></b></div></div></a>
+  ${Game.vn({ mood: closed === 3 ? 'cheer' : Game.mood(), title: status, text: esc(Game.line()), cap: 'きょうの一言', cls: 'vn-today' })}
   <div class="btns today-cta"><a class="btn big" href="#/focus">${icon('play', 17)} 开始专注</a><a class="btn big tinted" href="#/learn/review/all">${icon('cards', 17)} 复习卡片</a></div>
   ${secHead(`今日任务 <span class="sec-n">${qDone}/3</span>`)}
   <div class="list quests5">${quests.map(([ic, c, t, n, m, u, h]) => `<a class="row q5 ${n >= m ? 'done' : ''}" href="${h}"><span class="q5-r">${Game.rings([{ p: n / m, c }], 34)}<i style="color:${c}">${icon(n >= m ? 'check' : ic, 13)}</i></span><div class="grow"><div class="t">${t}</div><div class="s num">${n} / ${m} ${u}</div></div>${n >= m ? `<span class="q5-ok">已完成</span>` : '<span class="chev">›</span>'}</a>`).join('')}</div>

@@ -4,7 +4,7 @@
   --text:#000000; --sub:#8A8A8E; --ter:#C4C4C7; --line:rgba(60,60,67,.16); --track:rgba(120,120,128,.14);
   --pri:#5856D6; --pri2:#6E6CF0; --pri-soft:rgba(88,86,214,.12); --pri-ink:#4644B8;
   --ok:#34C759; --warn:#FF9500; --bad:#FF3B30; --info:#007AFF;
-  --c-focus:#FF2D55; --c-cards:#2DBE4E; --c-xp:#00A5D8; --c-streak:#FF9500; --c-exam:#5856D6; --c-wrong:#FF3B30;
+  --c-focus:#6A64EE; --c-cards:#E7709E; --c-xp:#D69A3C; --c-focus2:#A99CFF; --c-cards2:#F6B7CF; --c-xp2:#F1D08A; --c-streak:#EE9A45; --c-exam:#5856D6; --c-wrong:#FF3B30;
   --c-notes:#F5A300; --c-plan:#007AFF; --c-blue:#007AFF; --c-teal:#30B0C7; --c-ice:#32ADE6;
   --lk1:#EDEDF0; --lk2:#D1D1D6; --lk3:#B4B4BA; --lk4:#E3E3E8; --lk5:#CDCDD2; --lk6:#A1A1A6;
   --glass:rgba(255,255,255,.66); --glass-hi:rgba(255,255,255,.95); --glass-line:rgba(255,255,255,.75);
@@ -18,7 +18,7 @@
   --text:#FFFFFF; --sub:#98989F; --ter:#5A5A5F; --line:rgba(255,255,255,.11); --track:rgba(120,120,128,.28);
   --pri:#7D7AFF; --pri2:#9A97FF; --pri-soft:rgba(125,122,255,.18); --pri-ink:#A9A7FF;
   --ok:#30D158; --warn:#FF9F0A; --bad:#FF453A; --info:#0A84FF;
-  --c-focus:#FF375F; --c-cards:#A4EB3C; --c-xp:#3ADCEB; --c-streak:#FF9F0A; --c-exam:#7D7AFF; --c-wrong:#FF453A;
+  --c-focus:#8E88FF; --c-cards:#FF8DB7; --c-xp:#F0BC66; --c-focus2:#C9C0FF; --c-cards2:#FFC6DA; --c-xp2:#F9E0A8; --c-streak:#F4AE5E; --c-exam:#7D7AFF; --c-wrong:#FF453A;
   --c-notes:#FFD60A; --c-plan:#0A84FF; --c-blue:#0A84FF; --c-teal:#40C8E0; --c-ice:#64D2FF;
   --lk1:#48484C; --lk2:#2E2E31; --lk3:#1E1E20; --lk4:#38383B; --lk5:#252527; --lk6:#6C6C70;
   --glass:rgba(40,40,44,.58); --glass-hi:rgba(255,255,255,.16); --glass-line:rgba(255,255,255,.12);
@@ -30,7 +30,7 @@
   --text:#FFFFFF; --sub:#98989F; --ter:#5A5A5F; --line:rgba(255,255,255,.11); --track:rgba(120,120,128,.28);
   --pri:#7D7AFF; --pri2:#9A97FF; --pri-soft:rgba(125,122,255,.18); --pri-ink:#A9A7FF;
   --ok:#30D158; --warn:#FF9F0A; --bad:#FF453A; --info:#0A84FF;
-  --c-focus:#FF375F; --c-cards:#A4EB3C; --c-xp:#3ADCEB; --c-streak:#FF9F0A; --c-exam:#7D7AFF; --c-wrong:#FF453A;
+  --c-focus:#8E88FF; --c-cards:#FF8DB7; --c-xp:#F0BC66; --c-focus2:#C9C0FF; --c-cards2:#FFC6DA; --c-xp2:#F9E0A8; --c-streak:#F4AE5E; --c-exam:#7D7AFF; --c-wrong:#FF453A;
   --c-notes:#FFD60A; --c-plan:#0A84FF; --c-blue:#0A84FF; --c-teal:#40C8E0; --c-ice:#64D2FF;
   --lk1:#48484C; --lk2:#2E2E31; --lk3:#1E1E20; --lk4:#38383B; --lk5:#252527; --lk6:#6C6C70;
   --glass:rgba(40,40,44,.58); --glass-hi:rgba(255,255,255,.16); --glass-line:rgba(255,255,255,.12);
@@ -127,10 +127,7 @@ input[type=text],input[type=search],input[type=number],input[type=date],input[ty
 .act-foot .av-k{font-size:13px;font-weight:500;color:var(--sub)}
 .af-v{font-size:19px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .af-v small{font-size:13px;font-weight:500;color:var(--sub);margin-left:2px}
-.act-note{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--sub);margin-top:12px;padding-top:10px;border-top:.5px solid var(--line)}
-.act-note .pal{flex:none;width:44px;height:44px;margin:-4px 0}
-.act-note b{display:block;font-size:13px;color:var(--text);font-weight:600;line-height:1.2}
-.act-note span{line-height:1.35}
+.act-note{font-size:13px;color:var(--sub);margin-top:10px}
 .today-cta{margin:12px 0 0;display:flex;gap:10px}
 .today-cta .btn{flex:1;padding:0 10px;white-space:nowrap}
 .quests5 .row{gap:12px}
@@ -265,7 +262,8 @@ input[type=text],input[type=search],input[type=number],input[type=date],input[ty
 .cs-h{font-size:12.5px;font-weight:600;color:rgba(255,255,255,.62)}
 .cs-v{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:var(--c);white-space:nowrap}
 .cs-v small{font-size:13px;margin-left:1px}
-.cele .cs{--c-focus:#FF375F;--c-cards:#A4EB3C;--c-xp:#3ADCEB;--c-streak:#FF9F0A;--c-exam:#7D7AFF;--c-wrong:#FF453A}
+.cele{--c-focus:#8E88FF;--c-cards:#FF8DB7;--c-xp:#F0BC66;--c-focus2:#C9C0FF;--c-cards2:#FFC6DA;--c-xp2:#F9E0A8}
+.cele .cs{--c-streak:#F4AE5E;--c-exam:#7D7AFF;--c-wrong:#FF453A}
 .cele-notes{width:100%;max-width:342px;margin-top:10px;background:rgba(255,255,255,.08);border-radius:18px;overflow:hidden}
 .cn{display:flex;align-items:center;gap:11px;padding:11px 14px;text-align:left;font-size:14.5px;color:#fff}
 .cn+.cn{border-top:.5px solid rgba(255,255,255,.1)}
@@ -273,7 +271,7 @@ input[type=text],input[type=search],input[type=number],input[type=date],input[ty
 .cele-lv{width:100%;max-width:342px;margin-top:16px}
 .cele-lv .lv-row{display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,.7);margin-bottom:7px}
 .cele-lv .xpbar{background:rgba(255,255,255,.14)}
-.cele-lv .xpbar i{background:#3ADCEB}
+.cele-lv .xpbar i{background:linear-gradient(90deg,#F9E0A8,#F0BC66)}
 .cele-foot{position:sticky;bottom:0;padding:12px 24px calc(var(--sab) + 22px);display:flex;justify-content:center}
 .cele-foot .btn{width:100%;max-width:342px;background:#fff!important;color:#000!important}
 /* ---- 连击 / 提示 ---- */
@@ -302,26 +300,39 @@ input[type=text],input[type=search],input[type=number],input[type=date],input[ty
 .qn{box-shadow:none}
 @media (prefers-reduced-motion: reduce){ .rg-a,.stc-b i,.cele-medal,.spin-in,.cele *{animation:none!important} }
 
-/* ---- 吉祥物「奶糖」 ---- */
-.mascot{overflow:visible;display:block}
-.mascot .m-body{transform-origin:60px 110px;animation:mBreath 4.2s ease-in-out infinite}
-.mascot .m-eyes{transform-box:fill-box;transform-origin:center;animation:mBlink 5.2s infinite}
-.mascot.m-happy .m-eyes,.mascot.m-cheer .m-eyes,.mascot.m-sleepy .m-eyes{animation:none}
-.mascot.m-happy .m-body{animation:mBob 2.4s ease-in-out infinite}
-.mascot.m-cheer .m-body{animation:mHop 1.3s cubic-bezier(.3,.7,.4,1) infinite}
-.mascot.m-cheer .m-arms{transform-origin:60px 70px;animation:mArms 1.3s ease-in-out infinite}
-.mascot.m-encourage .m-wave{transform-box:fill-box;transform-origin:30% 90%;animation:mWave 1.6s ease-in-out infinite}
-.mascot.m-sleepy .m-body{animation:mSway 5s ease-in-out infinite}
-.mascot .m-fx{animation:mFx 2.4s ease-in-out infinite}
-@keyframes mBreath{0%,100%{transform:scale(1,1)}50%{transform:scale(1.012,.985)}}
-@keyframes mBlink{0%,93%,100%{transform:scaleY(1)}95.5%{transform:scaleY(.1)}}
-@keyframes mBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
-@keyframes mHop{0%,100%{transform:translateY(0) scale(1,1)}35%{transform:translateY(-5px) scale(.99,1.02)}70%{transform:translateY(0) scale(1.02,.98)}}
-@keyframes mArms{0%,100%{transform:rotate(0)}50%{transform:translateY(-2px)}}
-@keyframes mWave{0%,100%{transform:rotate(0)}50%{transform:rotate(-18deg)}}
-@keyframes mSway{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg) translateY(1px)}}
-@keyframes mFx{0%,100%{opacity:.55;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
-.cele-pal{position:absolute;right:-46px;bottom:-14px;width:78px;height:78px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.45));animation:palIn .7s .45s cubic-bezier(.2,.9,.3,1.2) both}
-@keyframes palIn{from{opacity:0;transform:translate(10px,14px) scale(.7)}to{opacity:1;transform:none}}
-.mbub .mb-pal{flex:none;width:40px;height:40px;margin:-6px -2px -6px 0}
-@media (prefers-reduced-motion: reduce){ .mascot *,.cele-pal{animation:none!important} }
+
+/* ---- 吉祥物「林遥学姐」（插画立绘） ---- */
+.pal-av{--s:40px;flex:none;position:relative;display:inline-block;width:var(--s);height:var(--s);border-radius:50%;overflow:hidden;
+  background:radial-gradient(120% 90% at 50% 18%,#FFFFFF 0,#ECEAF7 58%,#DCD9EE 100%);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.08)}
+.pal-av img,.pal-cut img{display:block;width:100%;height:100%;object-fit:cover;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.pal-cut{--s:120px;flex:none;position:relative;display:inline-block;width:var(--s);height:var(--s);
+  -webkit-mask-image:linear-gradient(#000 78%,transparent 100%);mask-image:linear-gradient(#000 78%,transparent 100%)}
+.pal-av img,.pal-cut img{animation:palFade .5s ease both}
+@keyframes palFade{from{opacity:0}to{opacity:1}}
+@media (prefers-color-scheme: dark){
+  .pal-av{background:radial-gradient(120% 90% at 50% 18%,#3A3A40 0,#2C2C2E 60%,#1F1F22 100%);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.1)}
+}
+/* 今日：学姐卡片 */
+.pal-card{display:flex;align-items:flex-end;gap:6px;padding:0 16px 0 4px;overflow:hidden;min-height:128px;
+  background:linear-gradient(105deg,color-mix(in srgb,var(--pri) 9%,var(--card)) 0,var(--card) 62%)}
+.pal-card .pc-img{--s:128px;margin:6px 0 -2px -4px;-webkit-mask-image:linear-gradient(#000 84%,transparent 100%);mask-image:linear-gradient(#000 84%,transparent 100%)}
+.pal-card .pc-txt{flex:1;min-width:0;align-self:center;padding:14px 0}
+.pc-name{font-size:13px;font-weight:600;color:var(--pri);letter-spacing:.02em}
+.pal-card p{margin:4px 0 10px;font-size:15px;line-height:1.45;font-weight:500;color:var(--text)}
+.pc-links{display:flex;gap:8px;flex-wrap:wrap}
+.pc-links a{text-decoration:none;font-size:13px;font-weight:600;color:var(--pri);background:color-mix(in srgb,var(--pri) 12%,transparent);padding:5px 12px;border-radius:999px;white-space:nowrap}
+/* 小提示行（专注页 / 奖章页） */
+.pal-tip{display:flex;align-items:center;gap:12px;margin:2px 2px 14px;font-size:14px;line-height:1.4;color:var(--sub)}
+.pal-tip b{display:block;font-size:13px;color:var(--text);font-weight:600;margin-bottom:1px}
+.pal-tip.in-card{background:var(--card);border-radius:16px;padding:10px 14px;margin:0 0 4px}
+/* 庆祝页：立绘站在奖章右下 */
+.cele-pal{--s:128px;position:absolute;right:-100px;bottom:-26px;animation:palIn .7s .45s cubic-bezier(.2,.9,.3,1.15) both}
+@keyframes palIn{from{opacity:0;transform:translate(12px,16px) scale(.85)}to{opacity:1;transform:none}}
+/* 鼓励气泡 */
+.mbub .mb-pal{--s:36px;margin:-4px 0 -4px -2px}
+/* 完成页 / 空状态 */
+.done-pal{position:relative;width:168px;height:168px;margin:0 auto 6px}
+.done-pal .done-badge{position:absolute;right:14px;bottom:18px;width:34px;height:34px;border-radius:50%;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px var(--bg)}
+.es-pal{position:relative;width:76px;height:76px;margin:0 auto 12px}
+.empty-state .es-pal .es-ic{position:absolute;right:-4px;bottom:-2px;width:28px;height:28px;border-radius:50%;background:var(--pri);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px var(--bg)}
+@media (prefers-reduced-motion: reduce){ .pal-av img,.pal-cut img,.cele-pal{animation:none!important} }
