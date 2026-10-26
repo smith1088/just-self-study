@@ -126,7 +126,7 @@ route('/learn/banks', 'learn', v => {
 });
 route('/learn/bank/:id', 'learn', (v, id) => {
   const b = Bank.byId(id); if (!b) { location.hash = '#/learn/banks'; return; }
-  setTop('题库', { back: '#/learn/banks', actions: `<button class="icon-btn txt" id="more">⋯</button>` });
+  setTop(b.zt ? '真题' : '题库', { back: b.zt ? '#/learn/pastpapers' : '#/learn/banks', actions: `<button class="icon-btn txt" id="more">⋯</button>` });
   const s = Bank.stat(b); const pos = Math.min(b.pos || 0, s.total); const wq = Bank.wrongQs(b).length;
   v.innerHTML = `<div class="card"><b style="font-size:18px">${esc(b.title)}</b><div class="small muted" style="margin-top:2px">${s.total} 题${b.subject ? ' · ' + esc(subj(b.subject).name) : ''}</div>
     <div class="grid3" style="margin-top:12px"><div class="stat"><div class="v">${s.done}</div><div class="l">已做</div></div><div class="stat"><div class="v" style="color:var(--ok)">${s.acc != null ? Math.round(s.acc * 100) + '%' : '—'}</div><div class="l">正确率</div></div><div class="stat"><div class="v" style="color:var(--bad)">${s.wrong}</div><div class="l">待重练</div></div></div></div>
@@ -178,7 +178,7 @@ route('/learn/bank-do/:id', 'learn', (v, id) => {
     const st = state[q.id]; if (st.counted) return; st.counted = true;
     Bank.record(b, q, r.status === 'ok' ? 'ok' : 'bad', Date.now() - t0); sess.n++; if (r.status === 'ok') sess.ok++;
     Game.addExtra(r.status === 'ok' ? 3 : 1); sess.xp = (sess.xp || 0) + (r.status === 'ok' ? 3 : 1); Game.combo(r.status === 'ok'); if (r.status !== 'ok') Game.encourage();
-    if (r.status !== 'ok' && !S.wrongs.some(w => w.examId === fakeExam.id && w.qid === q.id)) { S.wrongs.unshift(wrongFromQuestion(q, fakeExam, st.a, r)); save('wrongs'); toast('已加入错题本'); }
+    if (r.status !== 'ok' && !S.wrongs.some(w => w.examId === fakeExam.id && w.qid === q.id)) { const w = wrongFromQuestion(q, fakeExam, st.a, r); if (q.material) w.material = q.material; S.wrongs.unshift(w); save('wrongs'); toast('已加入错题本'); }
     if (r.status === 'ok' && mode === 'wrong') { const w = S.wrongs.find(w => w.examId === fakeExam.id && w.qid === q.id); if (w) { w.correctStreak = (w.correctStreak || 0) + 1; w.reviewCount = (w.reviewCount || 0) + 1; w.lastReview = Date.now(); save('wrongs'); } }
     if (mode === 'seq') b.pos = Math.min(order.length, i + 1);
     save('banks');
@@ -189,6 +189,7 @@ route('/learn/bank-do/:id', 'learn', (v, id) => {
     const hist = b.stats?.[q.id];
     v.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="small"><b>${i + 1}</b> / ${order.length}${mode === 'seq' ? '' : ` · 题库共 ${b.questions.length} 题`}</span><span class="small muted">本次 ${sess.ok}/${sess.n} 正确${hist ? ` · 此题做过 ${hist.n} 次` : ''}</span></div>
       <div class="progress"><i style="width:${(i + 1) / order.length * 100}%"></i></div>
+      ${q.material ? `<details class="material zt-mat"${i === 0 || order[i - 1].material !== q.material ? ' open' : ''}><summary class="small muted">阅读材料</summary><div class="md">${md(q.material)}</div></details>` : ''}
       <div class="q card" data-q="${q.id}">${qHead(q, mode === 'seq' ? i : b.questions.indexOf(q))}${stemHtml(q, !graded)}${graded ? resultBody(q, st.a, st.r) : answerInput(q, st.a)}</div>
       ${needBtn ? `<button class="btn block" id="chk" style="min-height:50px">${QT[q.type].objective ? '提交答案' : '查看参考答案并自评'}</button>` : ''}
       <div class="btns" style="margin-top:12px"><button class="btn plain" id="prev" ${i ? '' : 'disabled'}>‹ 上一题</button><button class="btn ${graded ? '' : 'plain'}" id="next">${i + 1 >= order.length ? '完成' : '下一题 ›'}</button></div>`;
@@ -198,7 +199,7 @@ route('/learn/bank-do/:id', 'learn', (v, id) => {
       if (act) {
         if (act.dataset.act === 'self') { const f = +act.dataset.f; st.r = { score: Math.round(q.score * f * 2) / 2, max: q.score, status: f >= 1 ? 'ok' : f > 0 ? 'mid' : 'bad', by: 'self', feedback: '自评' }; finish(q, st.r); draw(); }
         else if (act.dataset.act === 'override') { st.r = { ...st.r, score: q.score, status: 'ok', feedback: '（已改判为正确）' }; S.wrongs = S.wrongs.filter(w => !(w.examId === fakeExam.id && w.qid === q.id)); save('wrongs'); const h = b.stats[q.id]; if (h) { h.last = 'ok'; h.ok++; } sess.ok++; save('banks'); draw(); }
-        else if (act.dataset.act === 'addwrong') { if (!S.wrongs.some(w => w.examId === fakeExam.id && w.qid === q.id)) { S.wrongs.unshift(wrongFromQuestion(q, fakeExam, st.a, st.r)); save('wrongs'); } toast('已加入错题本'); act.disabled = true; }
+        else if (act.dataset.act === 'addwrong') { if (!S.wrongs.some(w => w.examId === fakeExam.id && w.qid === q.id)) { const w = wrongFromQuestion(q, fakeExam, st.a, st.r); if (q.material) w.material = q.material; S.wrongs.unshift(w); save('wrongs'); } toast('已加入错题本'); act.disabled = true; }
         return;
       }
       const o = ev.target.closest('.opt'); if (!o || graded) return;
@@ -216,4 +217,79 @@ route('/learn/bank-do/:id', 'learn', (v, id) => {
     if (mode === 'seq' && !graded && (b.pos || 0) !== i) { b.pos = i; save('banks'); } // 记住断点
   };
   draw();
+});
+
+/* ========== 真题练习：真题包由用户从本机文件导入（不随网站发布），只存在本设备 IndexedDB，不上传、不发送 ========== */
+const ZT = {
+  data: null, KEY: 'ztPack',
+  async load() { if (this.data === null) this.data = (await DB.get(this.KEY)) || false; return this.data || null; },
+  /** 严格校验导入文件，只保留白名单字段；任何一题不合格就整包拒绝 */
+  validate(j) {
+    const bad = m => { throw new Error(m); };
+    if (!j || typeof j !== 'object' || Array.isArray(j)) bad('文件内容不是真题包');
+    if (j.format !== 'study-workbench-ztpack') bad('这不是学习工作台的真题包');
+    if (!Array.isArray(j.papers) || !j.papers.length || j.papers.length > 50) bad('真题包里没有试卷');
+    const str = (x, n) => typeof x === 'string' ? x.trim().slice(0, n) : '';
+    const ids = new Set();
+    const papers = j.papers.map((p, k) => {
+      if (!p || typeof p !== 'object') bad(`第 ${k + 1} 套试卷格式错误`);
+      const id = str(p.id, 60); if (!/^[A-Za-z0-9_-]+$/.test(id) || ids.has(id)) bad(`第 ${k + 1} 套试卷缺少有效 id`); ids.add(id);
+      const title = str(p.title, 80); if (!title) bad(`第 ${k + 1} 套试卷缺少标题`);
+      if (!Array.isArray(p.questions) || !p.questions.length || p.questions.length > 300) bad(`「${title}」没有题目`);
+      const qids = new Set();
+      const questions = p.questions.map((q, n) => {
+        let nq; try { nq = normalizeQuestion(q, n); } catch (e) { bad(`「${title}」${e.message}`); }
+        const qid = str(q.id, 100); if (!/^[A-Za-z0-9_-]+$/.test(qid) || qids.has(qid)) bad(`「${title}」第 ${n + 1} 题缺少有效 id`); qids.add(qid);
+        const out = { id: qid, type: nq.type, stem: nq.stem.slice(0, 20000), answer: nq.answer, explanation: nq.explanation.slice(0, 20000), knowledgePoint: nq.knowledgePoint.slice(0, 60), section: str(q.section, 60), score: nq.score }; if (nq.options) out.options = nq.options;
+        if (typeof q.material === 'string' && q.material.trim()) out.material = q.material.slice(0, 40000);
+        return out;
+      });
+      const sources = (Array.isArray(p.sources) ? p.sources : []).slice(0, 20).map(x => ({ t: str(x?.t, 120) || '来源', u: str(x?.u, 500) })).filter(x => /^https?:\/\/[^\s"'<>]+$/i.test(x.u));
+      const gaps = (Array.isArray(p.gaps) ? p.gaps : []).slice(0, 30).map(g => str(g, 300)).filter(Boolean);
+      return { id, v: Number.isFinite(+p.v) ? +p.v : 1, kind: p.kind === 'cet4' ? 'cet4' : 'gaokao', title, sub: str(p.sub, 120), subject: str(p.subject, 20) === 'english' ? 'english' : 'math', sources, gaps, questions };
+    });
+    return { format: j.format, name: str(j.name, 80) || '真题包', updated: str(j.updated, 20), importedAt: Date.now(), papers };
+  },
+  async importFile() {
+    const [f] = await pickFile('.json,application/json,text/plain,application/octet-stream'); if (!f) return false;
+    if (f.size > 8 * 1024 * 1024) { toast('文件太大，不像真题包'); return false; }
+    let j; try { j = JSON.parse(await readFileAs(f)); } catch (e) { toast('文件不是有效的 JSON'); return false; }
+    let pack; try { pack = this.validate(j); } catch (e) { toast(e.message || '真题包格式错误'); return false; }
+    await DB.set(this.KEY, pack); this.data = pack;
+    toast(`已导入 ${pack.papers.length} 套真题`); return true;
+  },
+  async remove() {
+    if (!(await confirmBox('删除已导入的真题包，以及由它生成的真题题库？（错题本里的题会保留）', '删除'))) return false;
+    await DB.set(this.KEY, null); this.data = false;
+    S.banks = S.banks.filter(b => !b.zt); save('banks'); toast('已删除真题包'); return true;
+  },
+  bankOf: id => S.banks.find(b => b.zt === id),
+  /** 把一套真题变成题库（已有则保留做题记录；真题包更新版本时替换题目） */
+  ensure(p) {
+    let b = this.bankOf(p.id); if (b && b.ztv === p.v) return b;
+    const { questions } = validateExam({ questions: p.questions });
+    questions.forEach((q, k) => { q.id = String(p.questions[k].id); q.subject = p.subject; });
+    if (b) { b.questions = questions; b.title = p.title; b.ztv = p.v; }
+    else { b = Bank.make(p.title, p.subject, questions); b.zt = p.id; b.ztv = p.v; S.banks.push(b); }
+    save('banks'); return b;
+  }
+};
+route('/learn/pastpapers', 'learn', v => {
+  setTop('真题练习', { back: '#/learn' });
+  v.innerHTML = '';
+  ZT.load().then(d => {
+    if (!v.isConnected) return;
+    if (!d) {
+      v.innerHTML = emptyState('doc', '还没有导入真题', '从「文件」选取真题包（.json），只保存在这台设备上。', '<button class="btn" id="ztImp">导入真题包</button>');
+      $('#ztImp', v).onclick = async () => { if (await ZT.importFile()) rerender(); };
+      return;
+    }
+    const groups = [['gaokao', '高考数学'], ['cet4', '大学英语四级']];
+    v.innerHTML = groups.map(([k, name]) => { const ps = d.papers.filter(p => p.kind === k); return ps.length ? `${secHead(name)}<div class="list">${ps.map(p => { const b = ZT.bankOf(p.id); const s = b ? Bank.stat(b) : null; return `<button class="row zt-p" data-p="${esc(p.id)}">${iconTile(k === 'cet4' ? 'words' : 'formula', k === 'cet4' ? '#ec4899' : '#4f6bed', 18)}<div class="grow"><div class="t">${esc(p.title)}</div><div class="s">${esc(p.sub)}${s && s.done ? ` · 已做 ${s.done}/${s.total}` : ''}${s && s.wrong ? ` · <b style="color:var(--bad)">错 ${s.wrong}</b>` : ''}</div></div><span class="chev">›</span></button>`; }).join('')}</div>` : ''; }).join('')
+      + `<details class="adv zt-src"><summary class="small muted">题目来源与缺漏说明</summary>${d.papers.map(p => `<div class="small" style="margin:10px 0 4px"><b>${esc(p.title)}</b></div><ul class="small muted zt-ul">${p.sources.map(x => `<li><a href="${esc(x.u)}" target="_blank" rel="noopener noreferrer">${esc(x.t)}</a></li>`).join('')}${p.gaps.map(g => `<li>缺漏：${esc(g)}</li>`).join('')}</ul>`).join('')}<p class="small muted">题目来自网络公开的考后整理版，不是考试院官方发布；如发现错误，以官方为准。真题包只保存在这台设备上。</p>
+      <button class="btn plain block" id="ztDel" style="color:var(--bad);margin-top:6px">删除已导入的真题包</button></details>`
+      + `<p class="small muted" style="margin:10px 4px">选择题点选项就出结果；填空 / 解答 / 作文点「查看参考答案并自评」。做错或自评 0 分的题会进错题本。</p>`;
+    $('#ztDel', v).onclick = async ev => { ev.stopPropagation(); if (await ZT.remove()) rerender(); };
+    v.onclick = ev => { const r = ev.target.closest('.zt-p'); if (!r) return; const p = d.papers.find(x => x.id === r.dataset.p); if (!p) return; try { const b = ZT.ensure(p); location.hash = '#/learn/bank/' + b.id; } catch (e) { toast(e.message || '真题打开失败'); } };
+  }).catch(e => { if (v.isConnected) v.innerHTML = emptyState('doc', '真题读取失败', esc(e.message || ''), ''); });
 });

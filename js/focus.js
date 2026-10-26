@@ -102,12 +102,12 @@ route('/focus', 'focus', v => {
     ${st.phase === 'focus' && started ? `<button class="fr-ic" id="stop" aria-label="结束并记录">${icon('check', 20)}</button>` : `<button class="fr-ic" id="skip" aria-label="${st.phase === 'focus' ? '跳到休息' : '跳过休息'}">${icon('next', 20)}</button>`}</div>
   <div class="fr-ctl-l"><span>重置</span><span></span><span>${st.phase === 'focus' && started ? '结束并记录' : st.phase === 'focus' ? '跳到休息' : '跳过休息'}</span></div>
   ${Game.vn({ mood, text: line, art: 96, cap: st.running ? 'いっしょに' : 'せんぱい', cls: 'vn-focus' })}
-  <div class="card fr-card"><div class="fr-h">这一轮<em>今回の目標</em></div><div class="grid2"><label class="f" style="margin:0"><span>科目</span><select id="psub">${subjOptions(st.subject)}</select></label>
+  <details class="card fr-card fr-opt"><summary class="fr-h">这一轮<span class="fr-sum">${esc(st.label || subj(st.subject).name)}</span></summary><div class="grid2"><label class="f" style="margin:0"><span>科目</span><select id="psub">${subjOptions(st.subject)}</select></label>
   <label class="f" style="margin:0"><span>关联计划</span><select id="ptodo"><option value="">不关联</option>${todos.map(t => `<option value="${t.id}" ${t.id === st.todoId ? 'selected' : ''}>${esc(t.title.slice(0, 20))}</option>`).join('')}</select></label></div>
-  <label class="f" style="margin:10px 0 0"><span>专注内容（可选）</span><input type="text" id="plabel" value="${esc(st.label)}" placeholder="例如：背 50 个单词"></label></div>
+  <label class="f" style="margin:10px 0 0"><span>专注内容（可选）</span><input type="text" id="plabel" value="${esc(st.label)}" placeholder="例如：背 50 个单词"></label></details>
   <div class="card fr-card"><div class="fr-h">今日专注<em>今日の記録</em><span class="fr-tot num">${fmtMin(tm)}<small> / ${fmtMin(c.dailyGoal)}</small></span></div><div class="fr-bar"><i style="width:${Math.min(100, tm / c.dailyGoal * 100)}%"></i></div>
-  ${today.length ? `<div class="fr-list">${today.slice(0, 12).map(s => `<div class="fr-row"><span class="dot" style="background:${subj(s.subject).color}"></span><div class="grow">${esc(s.label || subj(s.subject).name)}</div><span class="num">${fmtDateTime(s.start).split(' ')[1]}</span><b class="num">${s.minutes}<small> 分钟</small></b>${s.partial ? '<em>提前</em>' : ''}</div>`).join('')}</div>` : '<div class="fr-empty">今天还没有专注记录，开始第一个番茄吧</div>'}</div>
-  <p class="fr-note">计时按结束时间计算，锁屏或切换应用后依然准确。iOS 后台无法播放提示音，专注时请保持屏幕常亮。</p></div>`;
+  ${today.length ? `<div class="fr-list">${today.slice(0, 5).map(s => `<div class="fr-row"><span class="dot" style="background:${subj(s.subject).color}"></span><div class="grow">${esc(s.label || subj(s.subject).name)}</div><span class="num">${fmtDateTime(s.start).split(' ')[1]}</span><b class="num">${s.minutes}<small> 分钟</small></b>${s.partial ? '<em>提前</em>' : ''}</div>`).join('')}</div>` : '<div class="fr-empty">今天还没有专注记录，开始第一个番茄吧</div>'}</div>
+  <p class="fr-note">锁屏后计时依然准确；iOS 后台不会响提示音。</p></div>`;
   F.paint();
   $('#ph').onclick = e => { const b = e.target.closest('button'); if (!b || b.dataset.p === st.phase) return; if (st.running && !confirm('切换会重置当前计时，确定吗？')) return; F.setPhase(b.dataset.p); rerender(); };
   const st_ = $('#start'); if (st_) st_.onclick = () => { F.start(); rerender(); };

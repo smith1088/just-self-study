@@ -184,11 +184,12 @@ function importText() {
     $('#xOk', el).onclick = () => { const text = $('#xB', el).value.trim(); if (!text) return toast('请先粘贴内容'); confirmImport({ title: $('#xT', el).value.trim() || '文本教材', text, source: 'text' }); };
   });
 }
+function bnSeg(k) { return `<div class="seg bn-seg">${[['books', '教材'], ['notes', '笔记']].map(([x, l]) => `<a href="#/learn/${x}" class="${x === k ? 'on' : ''}">${l}</a>`).join('')}</div>`; }
 route('/learn/books', 'learn', v => {
-  setTop('教材', { back: '#/learn' });
+  setTop('教材与笔记', { back: '#/learn' });
   if (Q.has('subject')) _bookSubj = Q.get('subject'); else _bookSubj = '';
-  v.innerHTML = `<button class="btn block big" id="iBig" style="margin-bottom:8px">${icon('plus', 18)} 导入教材</button>
-    <div class="small muted" style="margin:0 4px 14px">PDF、拍几页照片或粘贴文字 → 自动分章 → 一键生成卡片 / 出试卷 / 整理重点${_bookSubj ? ` · 将归入「${esc(subj(_bookSubj).name)}」` : ''}</div>
+  v.innerHTML = `${bnSeg('books')}<button class="btn block big" id="iBig" style="margin-bottom:8px">${icon('plus', 18)} 导入教材</button>
+    <div class="small muted" style="margin:0 4px 14px">PDF、照片或粘贴文字，自动分章${_bookSubj ? ` · 将归入「${esc(subj(_bookSubj).name)}」` : ''}</div>
     <h3>我的教材</h3>
     ${S.books.length ? `<div class="list">${S.books.map(b => `<a class="row" href="#/learn/book/${b.id}"><div class="grow"><div class="t">${esc(b.title)}</div><div class="s">${b.chapters.length} 章节 · ${Books.totalChars(b).toLocaleString()} 字 · ${fmtDate(b.createdAt)}</div></div>${subjChip(b.subject)}<span class="chev">›</span></a>`).join('')}</div>` : `${emptyState('books', '还没有教材', '导入课本 PDF、拍照或粘贴文本，就能按章节阅读、生成卡片和 AI 出卷。')}`}`;
   $('#iBig').onclick = bookImportSheet;
@@ -236,7 +237,7 @@ route('/learn/book/:id/ch/:cid', 'learn', (v, id, cid) => {
   return () => { if (editing && $('#cX')) { c.title = $('#cT').value.trim() || c.title; c.text = $('#cX').value; save('books'); } };
 });
 async function aiCardsFromText(title, text, subject) {
-  if (!AI.ready()) return showAIError(new AIError('AI 生成卡片需要先配置 AI。请到「我的 → 设置 → AI 设置」填写。', 'config'));
+  if (!AI.ready()) return showAIError(new AIError('AI 生成卡片需要先配置 AI。请到「我的 → 设置 → AI 与隐私」填写。', 'config'));
   openSheet(`<h2>AI 生成卡片</h2><label class="f"><span>数量</span><input type="number" id="n" value="15" inputmode="numeric"></label><label class="f"><span>加入卡组</span><select id="dk">${S.decks.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join('')}<option value="__new" selected>＋ 新建「${esc(title.slice(0, 20))}」</option></select></label><button class="btn block" id="go">生成</button>`, el => {
     $('#go', el).onclick = async () => {
       const n = Math.min(50, Math.max(1, +$('#n', el).value || 15)); let did = $('#dk', el).value; closeSheet();
@@ -255,7 +256,7 @@ async function aiCardsFromText(title, text, subject) {
 const bookText = b => b.chapters.map(c => `## ${c.title}\n${c.text}`).join('\n\n');
 // 整理重点：AI 把教材内容提炼成一篇 Markdown 重点笔记，保存到「笔记」
 async function aiKeyPoints(title, text, subject) {
-  if (!AI.ready()) return showAIError(new AIError('整理重点需要先配置 AI。请到「我的 → 设置 → AI 设置」填写。', 'config'));
+  if (!AI.ready()) return showAIError(new AIError('整理重点需要先配置 AI。请到「我的 → 设置 → AI 与隐私」填写。', 'config'));
   if (!String(text).trim()) return toast('这部分还没有文字内容');
   try {
     const body = await withLoading('AI 正在整理重点…', sig => AI.chat([

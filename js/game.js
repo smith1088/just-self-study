@@ -13,9 +13,27 @@ const MASCOT_LINES = {
 /* ---- 吉祥物「林遥学姐」：插画立绘（img/mascot/*.webp），5 种情绪：normal/happy/cheer/encourage/sleepy ---- */
 const MASCOT = {
   name: '林遥学姐', short: '学姐',
-  moods: ['normal', 'happy', 'cheer', 'encourage', 'sleepy', 'shy', 'pout', 'gaze'],
-  alt: { normal: '林遥学姐抱着平板微笑', happy: '林遥学姐开心地挥手', cheer: '林遥学姐握拳为你欢呼', encourage: '林遥学姐竖起大拇指鼓励你', sleepy: '林遥学姐困倦地打哈欠', shy: '林遥学姐红着脸抱着平板', pout: '林遥学姐抱着胳膊鼓起脸', gaze: '林遥学姐托着下巴温柔地看着你' },
-  src(m, face) { return `img/mascot/${m}${face ? '-face' : ''}.webp`; }
+  moods: ['normal', 'happy', 'cheer', 'encourage', 'sleepy', 'shy', 'pout', 'gaze', 'night', 'surprised', 'wink', 'proud'],
+  alt: { normal: '林遥学姐抱着平板微笑', happy: '林遥学姐开心地挥手', cheer: '林遥学姐握拳为你欢呼', encourage: '林遥学姐竖起大拇指鼓励你', sleepy: '林遥学姐困倦地打哈欠', shy: '林遥学姐红着脸抱着平板', pout: '林遥学姐抱着胳膊鼓起脸', gaze: '林遥学姐托着下巴温柔地看着你', night: '林遥学姐裹着毯子捧着热饮', surprised: '林遥学姐惊讶地捂住嘴', wink: '林遥学姐竖起手指俏皮地眨眼', proud: '林遥学姐骄傲地举着 98 分的试卷', hoodie: '穿着居家卫衣的林遥学姐挥手说晚安' },
+  /* 服装：img 里列出该服装有专门立绘的表情，其余表情沿用毛衣立绘 */
+  outfits: {
+    sweater: { name: '毛衣', img: {} },
+    hoodie: { name: '居家卫衣', img: { normal: 'hoodie', happy: 'hoodie', cheer: 'hoodie', encourage: 'hoodie', sleepy: 'hoodie' } }
+  },
+  /* 节日服装钩子：以后放入图片并登记 outfits 后，在这里加 { from: '12-24', to: '12-26', outfit: 'xmas' } 即可自动生效 */
+  holidays: [],
+  pin: '', // 临时（如聊天里说「晚安」）
+  outfit(d = new Date()) {
+    const p = S.settings?.lin?.outfit; if (p && p !== 'auto' && this.outfits[p]) return p;
+    if (this.pin && this.outfits[this.pin]) return this.pin;
+    const md = pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+    const h = this.holidays.find(x => this.outfits[x.outfit] && (x.from <= x.to ? md >= x.from && md <= x.to : md >= x.from || md <= x.to)); if (h) return h.outfit;
+    const hm = d.getHours() * 60 + d.getMinutes(); if (hm >= 22 * 60 + 30 || hm < 5 * 60) return 'hoodie';
+    return 'sweater';
+  },
+  file(m) { const o = this.outfits[this.outfit()] || this.outfits.sweater; return o.img[m] || m; },
+  altOf(m) { const f = this.file(m); return this.alt[f] || this.alt[m] || this.name; },
+  src(m, face) { return `img/mascot/${this.file(m)}${face ? '-face' : ''}.webp`; }
 };
 const Game = {
   g() {
@@ -135,6 +153,7 @@ const Game = {
     const h = new Date().getHours(); const t = this.today(), goal = this.goal();
     if (t >= goal) return 'happy';
     if (h >= 23 || h < 5) return 'sleepy';
+    if (h >= 21 && t < goal * 0.3) return 'night';
     return t >= goal * 0.7 ? 'encourage' : 'normal';
   },
   line() {
@@ -148,7 +167,7 @@ const Game = {
   /** 吉祥物：size ≤ 96 用圆形头像，否则用透明底半身立绘；opts.cut 强制立绘、opts.ring 头像描边 */
   mascot(mood = 'normal', size = 96, cls = '', opts = {}) {
     let m = { sad: 'encourage', cheering: 'cheer', encouraging: 'encourage' }[mood] || mood; if (!MASCOT.moods.includes(m)) m = 'normal';
-    const face = !opts.cut && size <= 96; const alt = MASCOT.alt[m];
+    const face = !opts.cut && size <= 96; const alt = MASCOT.altOf(m);
     return face
       ? `<span class="pal-av m-${m} ${cls}" style="--s:${size}px"><img src="${MASCOT.src(m, true)}" alt="${alt}" width="${size}" height="${size}" decoding="async" loading="lazy" draggable="false"></span>`
       : `<span class="pal-cut m-${m} ${cls}" style="--s:${size}px"><img src="${MASCOT.src(m)}" alt="${alt}" width="${size}" height="${size}" decoding="async" loading="lazy" draggable="false"></span>`;

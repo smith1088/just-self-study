@@ -7,7 +7,7 @@ function wrongFiltered() {
 }
 function wrongAnswerText(w) { return fmtAnswer({ type: w.qtype }, w.answer); }
 function wrongQuestionHtml(w, reveal = true) {
-  let h = `<div class="stem">${richText(w.stem)}</div>`;
+  let h = (w.material ? `<details class="material zt-mat"><summary class="small muted">阅读材料</summary><div class="md">${md(w.material)}</div></details>` : '') + `<div class="stem">${richText(w.stem)}</div>`;
   if (w.image) h += `<img class="thumb" src="${w.image}" alt="题目图片">`;
   if (w.options && w.options.length) h += w.options.map((o, i) => { const L = LETTERS[i]; const isAns = reveal && (Array.isArray(w.answer) ? w.answer.includes(L) : w.answer === L); const picked = reveal && (Array.isArray(w.userAnswer) ? w.userAnswer.includes(L) : w.userAnswer === L); return `<div class="opt ${isAns ? 'right' : picked ? 'wrong' : ''}" style="cursor:default"><b>${L}.</b><span style="flex:1">${rt(o)}</span>${picked ? '<span class="small">我的答案</span>' : ''}</div>`; }).join('');
   if (reveal) {
@@ -23,6 +23,7 @@ function wrongQuestionHtml(w, reveal = true) {
 }
 function wrongChips(w) { return `${subjChip(w.subject)}<span class="chip">${QT[w.qtype]?.short || '题目'}</span>${w.knowledgePoint ? `<span class="chip">${esc(w.knowledgePoint)}</span>` : ''}${w.chapter ? `<span class="chip">${esc(w.chapter)}</span>` : ''}${w.mastered ? '<span class="chip" style="color:var(--ok)">已掌握</span>' : ''}`; }
 route('/learn/wrong', 'learn', v => {
+  if (Q.has('subject')) { const q = Q.get('subject'); WF.subject = S.settings.subjects.some(x => x.id === q) ? q : ''; WF.kp = ''; }
   setTop('错题本', { back: '#/learn', actions: `<button class="icon-btn" id="addW" aria-label="添加">＋</button>` });
   $('#addW').onclick = () => editWrong();
   const kps = [...new Set(S.wrongs.filter(w => !WF.subject || w.subject === WF.subject).map(w => w.knowledgePoint).filter(Boolean))];
@@ -34,17 +35,17 @@ route('/learn/wrong', 'learn', v => {
     $('#selBar').innerHTML = selMode ? `<div class="btns" style="margin-bottom:12px"><button class="btn plain" id="sc">取消</button><button class="btn" id="sv" ${sel.size ? '' : 'disabled'}>举一反三出题（${sel.size}）</button></div>` : '';
     if (selMode) { $('#sc').onclick = () => { selMode = false; sel.clear(); draw(); }; $('#sv').onclick = () => { examDraft.types = { single: 0, multiple: 0, judge: 0, blank: 0, short: 0, calc: 0 }; location.hash = '#/learn/exam/new?wrong=' + [...sel].join(','); }; }
   };
-  v.innerHTML = `<div class="grid3" style="margin-bottom:12px"><div class="stat"><div class="v" style="color:var(--bad)">${todo}</div><div class="l">待攻克</div></div><div class="stat"><div class="v" style="color:var(--ok)">${S.wrongs.length - todo}</div><div class="l">已掌握</div></div><div class="stat"><div class="v">${S.wrongs.length}</div><div class="l">总计</div></div></div>
-    <div class="btns" style="margin-bottom:8px"><a class="btn" href="#/learn/wrong-review">${icon('repeat', 18)} 错题复习</a><button class="btn ghost" id="vs">${icon('sparkle', 18)} 举一反三</button></div>
-    <div class="btns" style="margin-bottom:12px"><a class="btn plain" href="#/learn/wrong-analysis">${icon('target', 18)} 薄弱点分析</a><a class="btn plain" href="#/learn/solve">${icon('camera', 18)} 拍照搜题</a></div>
+  const fOn = !!(WF.subject || WF.qtype || WF.kp); const cnt = { todo, done: S.wrongs.length - todo, all: S.wrongs.length };
+  v.innerHTML = `<div class="btns" style="margin-bottom:8px"><a class="btn" href="#/learn/wrong-review">${icon('repeat', 18)} 错题复习</a><button class="btn ghost" id="vs">${icon('sparkle', 18)} 举一反三</button></div>
+    <div class="link-row"><a href="#/learn/wrong-analysis">${icon('target', 15)} 薄弱点分析</a><a href="#/learn/solve">${icon('camera', 15)} 拍照搜题</a></div>
     <div id="selBar"></div>
+    <div class="seg" id="wst">${[['todo', '待攻克'], ['done', '已掌握'], ['all', '全部']].map(([k, l]) => `<button data-k="${k}" class="${WF.status === k ? 'on' : ''}">${l} <span class="num">${cnt[k]}</span></button>`).join('')}</div>
     <input type="search" id="wq" placeholder="搜索题目、知识点、笔记" value="${esc(WF.q)}" style="margin-bottom:10px">
-    <div class="seg" id="wst">${[['todo', '待攻克'], ['done', '已掌握'], ['all', '全部']].map(([k, l]) => `<button data-k="${k}" class="${WF.status === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <details class="adv flt"${fOn ? ' open' : ''}><summary>筛选${fOn ? ` · ${esc([WF.subject && subj(WF.subject).name, WF.qtype && QT[WF.qtype].name, WF.kp].filter(Boolean).join(' / '))}` : ''}</summary>
     <div class="grid2" style="margin-bottom:10px"><select id="wsj"><option value="">全部科目</option>${S.settings.subjects.map(s => `<option value="${s.id}" ${WF.subject === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select>
     <select id="wqt"><option value="">全部题型</option>${QT_ORDER.map(t => `<option value="${t}" ${WF.qtype === t ? 'selected' : ''}>${QT[t].name}</option>`).join('')}</select></div>
-    ${kps.length ? `<div class="chips" id="wkp" style="margin-bottom:12px"><button class="chip ${!WF.kp ? 'sel' : ''}" data-k="">全部知识点</button>${kps.slice(0, 30).map(k => `<button class="chip ${WF.kp === k ? 'sel' : ''}" data-k="${esc(k)}">${esc(k)}</button>`).join('')}</div>` : ''}
-    <div id="wl"></div><button class="fab" id="fab" aria-label="添加错题">＋</button>`;
-  $('#fab').onclick = () => editWrong();
+    ${kps.length ? `<div class="chips" id="wkp"><button class="chip ${!WF.kp ? 'sel' : ''}" data-k="">全部知识点</button>${kps.slice(0, 30).map(k => `<button class="chip ${WF.kp === k ? 'sel' : ''}" data-k="${esc(k)}">${esc(k)}</button>`).join('')}</div>` : ''}</details>
+    <div id="wl"></div>`;
   $('#wq').oninput = e => { WF.q = e.target.value; draw(); };
   $('#wst').onclick = e => { const b = e.target.closest('button'); if (b) { WF.status = b.dataset.k; rerender(); } };
   $('#wsj').onchange = e => { WF.subject = e.target.value; WF.kp = ''; rerender(); };

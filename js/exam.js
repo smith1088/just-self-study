@@ -119,7 +119,7 @@ function gradeObjective(q, a) {
 async function gradeSubjectiveAI(exam, qs, signal) {
   const items = qs.map((q, i) => ({ id: i + 1, type: QT[q.type].name, question: q.stem, reference: q.answer, rubric: q.explanation, maxScore: q.score, studentAnswer: String(exam.answers[q.id] || '').slice(0, 3000) || '（未作答）' }));
   const res = await AI.json([
-    { role: 'system', content: '你是一名严谨、公正且善于鼓励的阅卷老师。根据参考答案和评分要点给学生的主观题打分，并给出简明的中文点评：指出得分点、失分点和改进建议。学生未作答则 0 分。只输出 JSON。' },
+    { role: 'system', content: '你是一名严谨、公正且善于鼓励的阅卷老师。根据参考答案和评分要点给学生的主观题打分，并给出简明的中文点评：指出得分点、失分点和改进建议。学生未作答则 0 分。只输出 JSON。' + ((exam.cet || exam.preset === 'cet4' || qs.some(q => /Writing|Translation/i.test(q.section || ''))) && typeof CET_RUBRIC === 'string' ? '\n\n' + CET_RUBRIC : '') },
     { role: 'user', content: `请批改以下题目，输出格式：{"results":[{"id":1,"score":数字(0到maxScore，可为0.5的倍数),"feedback":"点评"}]}\n\n${JSON.stringify(items, null, 1)}` }
   ], o => { const r = o.results || o; if (!Array.isArray(r)) throw new Error('缺少 results 数组'); return r; }, { signal, temperature: 0.2 });
   qs.forEach((q, i) => {
@@ -164,7 +164,7 @@ function examGroups(e) {
   return QT_ORDER.map(t => [t, e.questions.filter(q => q.type === t)]).filter(g => g[1].length).map(([t, qs], gi) => ({ title: `${CN_IDX[gi]}、${QT[t].name}`, sub: `共 ${qs.length} 题 · ${qs.reduce((a, q) => a + q.score, 0)} 分`, qs }));
 }
 const fmtMS = ms => { const s = Math.max(0, Math.round(ms / 1000)); const h = Math.floor(s / 3600); return (h ? h + ':' + pad2(Math.floor(s / 60) % 60) : Math.floor(s / 60)) + ':' + pad2(s % 60); };
-function materialHtml(q, prev) { return q.material && q.material !== prev ? `<div class="material"><div class="small muted" style="margin-bottom:4px">阅读材料</div>${md(q.material)}</div>` : ''; }
+function materialHtml(q, prev) { return q.material && q.material !== prev ? `<div class="material">${/[a-z]{3,}\s+[a-z]{3,}\s+[a-z]{3,}/i.test(q.material) && TTS.ok ? `<button type="button" class="icon-btn mat-say" aria-label="朗读材料">${icon('speaker', 17)}</button>` : ''}<div class="small muted" style="margin-bottom:4px">阅读材料</div>${md(q.material)}</div>` : ''; }
 const shortMD = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()}`; };
 function examPct(e) { const t = examTotals(e); return t.max ? Math.round(t.score / t.max * 1000) / 10 : 0; }
 
@@ -186,11 +186,11 @@ const CET_REQ = `请严格按照大学英语四级（CET-4）真题结构出一�
 
 /* ---- 试卷列表 ---- */
 route('/learn/exams', 'learn', v => {
-  setTop('AI 出卷', { back: '#/learn', actions: `<a class="icon-btn" href="#/learn/exam/new" aria-label="新建">＋</a>` });
+  setTop('AI 出题', { back: '#/learn' });
   const ex = S.exams.slice().sort((a, b) => b.createdAt - a.createdAt);
   const graded = S.exams.filter(e => e.status === 'graded').sort((a, b) => (a.submittedAt || a.createdAt) - (b.submittedAt || b.createdAt));
   v.innerHTML = `<a class="btn block" href="#/learn/exam/new" style="margin-bottom:10px">${icon('plus', 18)} 生成新试卷 / 模拟考试</a>
-    ${!AI.ready() ? `<div class="notice info">尚未配置 AI：可以先用<b>示例试卷</b>体验答题、判分和错题本；配置 AI 后可根据你的教材自动出题。<a href="#/me/settings">去设置</a></div>` : ''}
+    ${!AI.ready() ? `<div class="small muted" style="margin:0 4px 10px">未配置 AI，可先体验示例试卷。<a href="#/me/settings?s=ai">去设置</a></div>` : ''}
     <button class="btn ghost block" id="demo" style="margin-bottom:12px">体验示例试卷（无需 AI）</button>
     ${graded.length ? `<a class="card" href="#/learn/exam-history" style="display:block;text-decoration:none;color:inherit"><div style="display:flex;justify-content:space-between;align-items:center"><b>成绩记录</b><span class="small muted">${graded.length} 次 · 平均 ${Math.round(graded.reduce((a, e) => a + examPct(e), 0) / graded.length)}% ›</span></div>${lineChart(graded.slice(-12).map(e => ({ y: examPct(e), label: shortMD(e.submittedAt || e.createdAt) })), { h: 90, mini: true })}</a>` : ''}
     <h3>历史试卷</h3>
@@ -254,7 +254,7 @@ route('/learn/exam/new', 'learn', v => {
     const total = QT_ORDER.reduce((a, t) => a + (D.types[t] || 0), 0) + (D.variants && !D.cet ? Math.min(D.variantN, pool.length) : 0);
     const P = EXAM_PRESETS[D.preset];
     v.innerHTML = `
-    ${!AI.ready() ? `<div class="notice">尚未配置 AI，点「生成」将使用内置示例题目演示流程（含计时与交卷）。<a href="#/me/settings">去配置 AI</a></div>` : ''}
+    ${!AI.ready() ? `<div class="notice">尚未配置 AI，点「生成」将使用内置示例题目演示流程（含计时与交卷）。<a href="#/me/settings?s=ai">去配置 AI</a></div>` : ''}
     <h3>模拟考试预设</h3><div class="chips" id="pre">${Object.entries(EXAM_PRESETS).map(([k, p]) => `<button class="chip ${D.preset === k ? 'sel' : ''}" data-p="${k}">${p.icon} ${p.name}</button>`).join('')}</div>
     ${P ? `<div class="notice info small" style="margin-top:8px">${P.icon} <b>${P.name}</b>：${P.desc}${P.cet ? '<br>按四级真题结构出题，各部分分值按比例缩小（满分 50）。' : ''}</div>` : ''}
     <h3>出题范围</h3><div class="card">

@@ -5,84 +5,93 @@ const isStandalone = () => window.navigator.standalone === true || matchMedia('(
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 let _rid = 0;
 function ring(pct, size = 76, stroke = 8, color = 'var(--pri)') { const r = (size - stroke) / 2, c = 2 * Math.PI * r; let defs = '', st = color; if (color === 'grad') { const id = 'rg' + (++_rid); defs = `<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--pri2)"/><stop offset="1" stop-color="var(--pri)"/></linearGradient></defs>`; st = `url(#${id})`; } return `<svg class="pring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${defs}<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${stroke}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${st}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - Math.max(0, Math.min(1, pct)))}" transform="rotate(-90 ${size / 2} ${size / 2})" class="ring-fg" style="--c:${c}"/></svg>`; }
+function actCard() {
+  const R = Game.ringItems(), lv = Game.level(), sk = Game.streak();
+  const pct = Math.round(R.reduce((a, r) => a + Math.min(1, r.p || 0), 0) / R.length * 100);
+  return `<a class="card act7" href="#/me/achievements"><div class="a7-top"><div class="a7-ring">${Game.rings(R, 132)}<div class="a7-c"><b class="num">${pct}<small>%</small></b><span>今日</span></div></div>
+    <div class="a7-vals">${R.map(r => `<div class="a7-v" style="--c:${r.c};--c2:${r.c2}"><div class="a7-k"><i></i>${r.k}</div><div class="a7-n num">${r.v}<span>/${r.g} ${r.u}</span></div></div>`).join('')}</div></div>
+    <div class="a7-foot"><div><span>连续学习</span><b class="num">${sk}<small>天</small></b></div><div><span>等级</span><b class="num">Lv ${lv.lv}</b></div><div><span>今日经验</span><b class="num">${Game.today()}<small>XP</small></b></div></div></a>`;
+}
 route('/today', 'today', v => {
   setTop('今日');
   const tm = Focus.todayMinutes(); const due = Cards.dueTotal();
   const todos = S.todos.filter(t => !t.done && t.due && t.due <= dayKey()).sort(sortTodos);
   const doneToday = S.todos.filter(t => t.done && t.doneAt >= startOfDay()).length;
-  const wr = S.wrongs.filter(w => !w.mastered).length; const st = Focus.st;
+  const st = Focus.st;
   const d = new Date();
-  const lv = Game.level(), sk = Game.streak();
   const revToday = Stats.reviewsSince(startOfDay());
-  const R = Game.ringItems(); const closed = R.filter(r => r.p >= 1).length;
-  const quests = [['focus', 'var(--c-focus)', '专注 25 分钟', Math.min(tm, 25), 25, '分钟', '#/focus'], ['cards', 'var(--c-cards)', '复习 20 张卡片', Math.min(revToday, 20), 20, '张', '#/learn/review/all'], ['check', 'var(--c-plan)', '完成 3 项计划', Math.min(doneToday, 3), 3, '项', '#/plan']];
-  const qDone = quests.filter(q => q[3] >= q[4]).length;
-  const ins = Game.insights();
-  const pct = Math.round(R.reduce((a, r) => a + Math.min(1, r.p || 0), 0) / R.length * 100);
-  const status = closed === 3 ? '三个圆环全部合拢，今天很出色。' : closed ? `已合拢 ${closed} 个圆环，再接再厉。` : Game.studiedToday() ? '今天已开始学习，继续保持。' : '从一次 25 分钟的专注开始今天。';
-  v.innerHTML = `<header class="t5-head"><div><div class="t5-date">${d.getMonth() + 1}月${d.getDate()}日 星期${WEEK[d.getDay()]}<span class="t5-jp">${'日月火水木金土'[d.getDay()]}曜日</span></div><h2 class="large-title">${greet()}${S.settings.name ? '，' + esc(S.settings.name) : ''}</h2></div><a class="t5-av" href="#/me" aria-label="我的">${esc((S.settings.name || '学').slice(0, 1))}</a></header>
+  const lg = Lin.greet(), lvn = Lin.level(), cw = Cet.words(), cd = Cet.daysLeft();
+  const rpNew = d.getDay() === 1 && S.meta.reportSeen !== dayKey(Report.weekStart(-1)) && Object.keys(Game.xpByDay()).some(k => k >= dayKey(Report.weekStart(-1)) && k < dayKey(Report.weekStart(0)));
+  const allT = todos.length + doneToday;
+  const left = todos.length;
+  v.innerHTML = `<header class="t5-head td2-head"><div><div class="t5-date">${d.getMonth() + 1}月${d.getDate()}日 星期${WEEK[d.getDay()]}</div><h2 class="large-title">${greet()}${S.settings.name ? '，' + esc(S.settings.name) : ''}</h2></div><a class="t5-av" href="#/me" aria-label="我的">${esc((S.settings.name || '学').slice(0, 1))}</a></header>
   ${isIOS() && !isStandalone() && !S.meta.hideInstall ? `<div class="notice info" id="inst"><b>添加到主屏幕</b>：点 Safari 底部的「分享」按钮，选择「添加到主屏幕」，即可像 App 一样全屏使用、离线可用。<button class="btn small plain" id="hideInst" style="margin-top:8px">不再提示</button></div>` : ''}
-  ${Remind.bannerHtml()}
+  <div class="tdw">
+  <a class="w w-lin vn-today" href="#/chat" id="tdChat" aria-label="和林遥学姐聊天"><span class="vn-art w-face"><img src="${MASCOT.src(lg.mood, true)}" alt="${esc(MASCOT.altOf(lg.mood))}" width="56" height="56"></span><span class="grow"><span class="w-ln">林遥学姐<em>${LIN_HEART}${esc(lvn.name)}</em></span><span class="w-lt">${esc(lg.text)}</span></span><span class="w-bub">${icon('send', 15)}</span></a>
+  ${rpNew ? `<a class="w w-rp" href="#/me/report?w=last">${icon('chart', 16)}<span class="grow">上周学习报告出炉啦</span><span class="chev">›</span></a>` : ''}
   ${ttNextHtml()}
-  ${st.running ? `<a class="card focus-live" href="#/focus">${icon('focus', 28)}<div style="flex:1"><b>${PHASES[st.phase]}进行中</b><div class="small" style="opacity:.9">${esc(st.label || subj(st.subject).name)}</div></div><b id="tdTime" class="mono" style="font-size:24px"></b></a>` : ''}
-  ${secHead('活动', '#/me/stats')}
-  <a class="card act7" href="#/me/achievements"><div class="a7-top"><div class="a7-ring">${Game.rings(R, 148)}<div class="a7-c"><b class="num">${pct}<small>%</small></b><span>今日</span></div></div>
-    <div class="a7-vals">${R.map(r => `<div class="a7-v" style="--c:${r.c};--c2:${r.c2}"><div class="a7-k"><i></i>${r.k}</div><div class="a7-n num">${r.v}<span>/${r.g} ${r.u}</span></div></div>`).join('')}</div></div>
-    <div class="a7-foot"><div><span>连续学习</span><b class="num">${sk}<small>天</small></b></div><div><span>等级</span><b class="num">Lv ${lv.lv}<small>${lv.title}</small></b></div><div><span>待复习</span><b class="num">${due}<small>张</small></b></div></div></a>
-  ${Game.vn({ mood: closed === 3 ? 'cheer' : Game.mood(), title: status, text: esc(Game.line()), cap: 'きょうの一言', cls: 'vn-today', actions: `<a class="vn-chat" href="#/chat" id="tdChat">${LIN_HEART}和学姐聊聊</a>` })}
-  <div class="btns today-cta"><a class="btn big" href="#/focus">${icon('play', 17)} 开始专注</a><a class="btn big tinted" href="#/learn/review/all">${icon('cards', 17)} 复习卡片</a></div>
-  ${secHead(`今日任务 <span class="sec-n">${qDone}/3</span>`)}
-  <div class="list quests5">${quests.map(([ic, c, t, n, m, u, h]) => `<a class="row q5 ${n >= m ? 'done' : ''}" href="${h}"><span class="q5-r">${Game.rings([{ p: n / m, c }], 34)}<i style="color:${c}">${icon(n >= m ? 'check' : ic, 13)}</i></span><div class="grow"><div class="t">${t}</div><div class="s num">${n} / ${m} ${u}</div></div>${n >= m ? `<span class="q5-ok">已完成</span>` : '<span class="chev">›</span>'}</a>`).join('')}</div>
-  ${secHead('亮点')}
-  ${ins.length ? ins.slice(0, 3).map(insightCard).join('') : `<div class="card hl" style="--c:var(--pri)"><div class="hl-h"><span class="hl-cat">${icon('sparkle', 15)}学习洞察</span></div><p class="hl-t">完成几次专注或复习后，这里会用一句话总结你的学习趋势。</p></div>`}
-  ${secHead(`今日计划${todos.length ? ` <span class="sec-n">${todos.length} 项待完成</span>` : ''}`, '#/plan', '全部')}
-  <div id="tdl">${todos.length ? `<div class="list">${todos.slice(0, 8).map(todoRow).join('')}</div>` : `<div class="card">${emptyState('plan', '今天没有待办', doneToday ? `已完成 ${doneToday} 项，做得好。` : '把要做的事写进计划，完成后打勾。', '<a class="btn small tinted" href="#/plan">添加计划</a>')}</div>`}</div>
-  ${secHead('快捷入口')}
-  <div class="grid3 quick">${[['#/learn/solve', 'camera', '拍照搜题', 'var(--c-exam)'], ['#/learn/exams', 'exam', 'AI 出卷', 'var(--c-blue)'], ['#/learn/wrong', 'wrong', `错题${wr ? ' ' + wr : ''}`, 'var(--c-wrong)'], ['#/learn/notes', 'notes', '笔记', 'var(--c-notes)'], ['#/learn/decks', 'cards', '卡片', 'var(--c-cards)'], ['#/me/achievements', 'trophy', '奖章', 'var(--c-streak)']].map(([h, i, t, c]) => `<a class="tile qt" href="${h}">${iconTile(i, c)}<div class="tt">${t}</div></a>`).join('')}</div>`;
+  <div class="w2">
+    <a class="w w-due" href="#/learn/review/all"><span class="w-k" style="--c:var(--c-cards)">${icon('cards', 14)}待复习</span><b class="w-n num">${due}<small>张</small></b><span class="w-s">${due ? '点我开始复习' : revToday ? `今天已复习 ${revToday} 张` : '暂无到期卡片'}</span></a>
+    <a class="w w-todo" href="#/plan"><span class="w-k" style="--c:var(--c-plan)">${icon('check', 14)}今日计划</span><b class="w-n num">${doneToday}<small>/ ${allT} 项</small></b><span class="w-s">${left ? `还剩 ${left} 项` : allT ? '全部完成' : '还没有计划'}</span></a>
+    <a class="w w-cet" href="#/learn/cet"><span class="w-k" style="--c:#EC4899">${icon('words', 14)}四级</span><b class="w-n num">${cd}<small>天</small></b><i class="w-bar"><i style="width:${cw.started ? Math.min(100, Math.round(cw.newToday / Math.max(1, cw.newGoal) * 100)) : 0}%"></i></i><span class="w-s">今日单词 ${cw.started ? cw.newToday : 0}/${cw.newGoal}</span></a>
+    <a class="w w-focus${st.running ? ' on' : ''}" href="#/focus"><span class="w-play">${icon(st.running ? 'focus' : 'play', 26)}</span>${st.running ? `<b class="mono" id="tdTime"></b><span class="w-s">${PHASES[st.phase]}中</span>` : `<b class="w-ft">开始专注</b><span class="w-s">今天 ${tm} 分钟</span>`}</a>
+  </div></div>`;
   const hi = $('#hideInst'); if (hi) hi.onclick = () => { S.meta.hideInstall = true; DB.set('meta', S.meta); $('#inst').remove(); };
-  bindTodoList($('#tdl'));
   let _nx = TT.next(), _nxT = 0;
   const tick = () => { if ($('#nxCd') && ++_nxT % 15 === 0) { const n = TT.next(); if (n && _nx && n.ref !== _nx.ref) { rerender(); return; } _nx = n; $('#nxCd').textContent = ttCountdown(n); } const el = $('#tdTime'); if (el) { const r = Focus.remain(); el.textContent = `${pad2(Math.floor(r / 60000))}:${pad2(Math.floor(r % 60000 / 1000))}`; } };
   tick(); const t = setInterval(tick, 1000); return () => clearInterval(t);
 });
 route('/learn', 'learn', v => {
   setTop('学习');
-  const due = Cards.dueTotal(); const wr = S.wrongs.filter(w => !w.mastered).length; 
-  const tiles = [
-    ['#/learn/tt', 'calendar', '课表', S.courses.length ? (() => { const n = TT.next(); return n ? `接下来：${esc(n.title)}` : `第 ${TT.curWeek()} 周`; })() : '导入课表 · 临时安排', '#5B8DEF'],
-    ['#/learn/solve', 'camera', '拍照搜题', `分步讲解 · 可追问`, '#8b5cf6'],
-    ['#/learn/exams', 'exam', 'AI 出卷 / 模拟考', `${S.exams.length} 份 · 期末 / 四级`, '#6366f1'],
-    ['#/learn/wrong', 'wrong', '错题本', wr ? `${wr} 道待攻克` : `${S.wrongs.length} 道`, '#f05252'],
-    ['#/learn/wrong-analysis', 'target', '薄弱点分析', '错误率 · 专项练习', '#ec4899'],
-    ['#/learn/decks', 'cards', '卡片复习', due ? `${due} 张待复习` : `${S.cards.length} 张卡片`, '#3b82f6'],
-    ['#/learn/notes', 'notes', '笔记', `${S.notes.length} 篇 · 支持公式`, '#f59e0b'],
-    ['#/learn/books', 'books', '导入教材', S.books.length ? `${S.books.length} 本 · 卡片 / 出卷 / 重点` : 'PDF / 拍照 / 粘贴文字', '#10b981'],
-    ['#/learn/banks', 'layers', '题库刷题', S.banks.length ? `${S.banks.reduce((a, b) => a + b.questions.length, 0)} 题 · 断点续刷` : '导入题库 · 随机抽题', '#14b8a6']
+  const due = Cards.dueTotal(); const wr = S.wrongs.filter(w => !w.mastered).length; const cw = Cet.words();
+  const big = [
+    ['#/learn/cet', 'words', '四级', `还有 ${Cet.daysLeft()} 天`, '#EC4899'],
+    ['#/learn/wrong', 'wrong', '错题本', wr ? `${wr} 道待攻克` : '做错的题自动收集', '#f05252'],
+    ['#/learn/exams', 'exam', 'AI 出题', S.exams.length ? `${S.exams.length} 份试卷` : '按章节出卷 · 模拟考', '#6366f1'],
+    ['#/learn/books', 'books', '教材与笔记', `${S.books.length} 本教材 · ${S.notes.length} 篇笔记`, '#10b981']
   ];
-  v.innerHTML = `<div class="grid2">${tiles.map(([h, i, t, s, c]) => `<a class="tile" href="${h}">${iconTile(i, c)}<div class="tt">${t}</div><div class="ts">${s}</div></a>`).join('')}</div>
-  <div class="card" style="margin-top:12px"><b style="display:flex;align-items:center;gap:8px">${iconTile('cap', 'var(--pri)', 18)}大一推荐学习流程</b><ol class="small muted flow">${['把高数 / 线代 / C 语言课本导入「教材」（PDF / 拍照 / 粘贴）', '每学完一节，用「AI 出卷」按章节出题；期末前用<b>模拟考试预设</b>限时练', '错题自动进「错题本」，在「薄弱点分析」里一键专项练习、生成周复习计划', '不会的作业题「拍照搜题」，看分步讲解，存入错题本', '四级单词用「卡片」每天复习（可开自动朗读）'].map(x => `<li>${x}</li>`).join('')}</ol></div>`;
+  const more = [
+    ['#/learn/tt', 'calendar', '课表', '#5B8DEF'], ['#/learn/solve', 'camera', '拍照搜题', '#8b5cf6'], ['#/learn/banks', 'layers', '题库刷题', '#14b8a6'], ['#/learn/pastpapers', 'doc', '真题练习', '#f59e0b'],
+    ['#/learn/wrong-analysis', 'target', '薄弱点分析', '#ec4899'], ['#/learn/exam-history', 'chart', '成绩记录', '#0ea5e9']
+  ];
+  v.innerHTML = `<a class="lh-hero" href="#/learn/decks">${iconTile('cards', '#3b82f6', 22)}<div class="grow"><div class="lh-t">背卡片</div><div class="lh-s">${due ? '今天待复习' : '今天都复习完了'}</div></div><span class="lh-n num">${due || ''}</span><span class="chev">›</span></a>
+  <div class="grid2 lh-grid">${big.map(([h, i, t, s, c]) => `<a class="tile" href="${h}">${iconTile(i, c)}<div class="tt">${t}</div><div class="ts">${s}</div></a>`).join('')}</div>
+  <details class="lh-more"${Q.get('more') ? ' open' : ''}><summary class="row"><div class="grow"><div class="t">更多工具</div><div class="s">课表、拍照搜题、题库、真题、薄弱点、成绩</div></div><span class="chev">›</span></summary>
+  <div class="list">${more.map(([h, i, t, c]) => `<a class="row" href="${h}">${iconTile(i, c, 18)}<div class="grow"><div class="t">${t}</div></div><span class="chev">›</span></a>`).join('')}</div></details>`;
 });
 route('/me', 'me', v => {
   setTop('我的');
-  const rows = [['#/me/achievements', 'trophy', '#FF9F0A', '奖章与等级', '经验值、奖章、连续学习与冻结卡'], ['#/me/stats', 'stats', '#3DBE5C', '学习统计', '专注时长、连续天数、复习情况'], ['#/learn/exam-history', 'chart', '#0ea5e9', '成绩记录', '各科考试得分趋势'], ['#/me/settings', 'settings', '#64748b', '设置', 'AI、科目、提醒、朗读、外观'], ['#/me/backup', 'backup', '#6366f1', '备份与恢复', '导出 / 导入 JSON 备份'], ['#/me/about', 'info', '#f59e0b', '使用说明', '安装、数据、提醒与限制']];
-  v.innerHTML = `<div class="profile card"><div class="avatar">${esc((S.settings.name || '学').slice(0, 1))}</div><div><b style="font-size:18px">${esc(S.settings.name || '同学')}</b><div class="small muted">大一 · Lv ${Game.level().lv} ${Game.level().title} · 连续 ${Stats.streak()} 天</div><div class="xpbar sm" style="margin-top:8px"><i style="width:${Math.round(Game.level().pct * 100)}%"></i></div></div></div>
-  <div class="list">${rows.map(([h, i, c, t, s]) => `<a class="row" href="${h}">${iconTile(i, c, 18)}<div class="grow"><div class="t">${t}</div><div class="s">${s}</div></div><span class="chev">›</span></a>`).join('')}</div>
-  <div class="grid3"><div class="stat"><div class="v">${S.notes.length}</div><div class="l">笔记</div></div><div class="stat"><div class="v">${S.cards.length}</div><div class="l">卡片</div></div><div class="stat"><div class="v">${S.books.length}</div><div class="l">教材</div></div><div class="stat"><div class="v">${S.exams.length}</div><div class="l">试卷</div></div><div class="stat"><div class="v">${S.wrongs.length}</div><div class="l">错题</div></div><div class="stat"><div class="v">${S.sessions.length}</div><div class="l">番茄</div></div></div>`;
+  const grp = (rows) => `<div class="list">${rows.map(([h, i, c, t]) => `<a class="row" href="${h}">${iconTile(i, c, 18)}<div class="grow"><div class="t">${t}</div></div><span class="chev">›</span></a>`).join('')}</div>`;
+  v.innerHTML = `<div class="profile card"><div class="avatar">${esc((S.settings.name || '学').slice(0, 1))}</div><div class="grow"><b style="font-size:18px">${esc(S.settings.name || '同学')}</b><div class="small muted">Lv ${Game.level().lv} ${Game.level().title}</div><div class="xpbar sm" style="margin-top:8px"><i style="width:${Math.round(Game.level().pct * 100)}%"></i></div></div></div>
+  ${secHead('今日活动')}
+  ${actCard()}
+  ${secHead('记录')}
+  ${grp([['#/me/achievements', 'trophy', '#FF9F0A', '奖章与等级'], ['#/me/stats', 'stats', '#3DBE5C', '学习统计'], ['#/me/report', 'chart', '#8B7CF6', '每周学习报告'], ['#/me/album', 'image', '#F2679B', '回忆相册']])}
+  <div style="height:12px"></div>
+  ${grp([['#/me/settings', 'settings', '#64748b', '设置'], ['#/me/about', 'info', '#f59e0b', '使用说明']])}`;
 });
 route('/me/settings', 'me', v => {
-  setTop('设置', { back: '#/me' });
+  const SEC = { study: '学习', remind: '提醒与日历', ai: 'AI 与隐私' }; const cur = SEC[Q.get('s')] ? Q.get('s') : '';
+  setTop(cur ? SEC[cur] : '设置', { back: cur ? '#/me/settings' : '#/me' });
   const c = S.settings.ai; const p = AI_PRESETS[c.preset] || AI_PRESETS.custom; const R = S.settings.remind, T = S.settings.tts;
   const vs = lang => (TTS.voices.length ? TTS.voices : (TTS.ok ? speechSynthesis.getVoices() : [])).filter(x => lang === 'zh' ? /^(zh|cmn)/i.test(x.lang) : /^en/i.test(x.lang)).map(x => `<option value="${esc(x.voiceURI)}" ${(lang === 'zh' ? T.zhVoice : T.enVoice) === x.voiceURI ? 'selected' : ''}>${esc(x.name)} (${esc(x.lang)})</option>`).join('');
-  v.innerHTML = `<h3>AI 设置（OpenAI 兼容接口）</h3>
+  const hid = k => k === cur ? '' : ' hidden';
+  const aiOn = !!(c.apiKey && c.baseUrl);
+  const idx = [['#/chat?set=1', 'me', '#F2679B', '学姐', `好感度 ${esc(Lin.level().name)} · 称呼、恋爱模式、记忆`, 'lnSet'], ['#/me/settings?s=study', 'cards', '#3b82f6', '学习', '卡片、科目、朗读'], ['#/me/settings?s=remind', 'bell', '#ff9f0a', '提醒与日历', R.enabled ? '学姐提醒已开启' : '已关闭'], ['#/me/settings?s=ai', 'sparkle', '#6366f1', 'AI 与隐私', aiOn ? `已配置 · ${esc(p.name)}` : '未配置（可选）'], ['#/me/backup', 'backup', '#10b981', '数据备份', '导出 / 导入 JSON']];
+  v.innerHTML = `<section class="sg${cur ? ' hidden' : ''}" data-s="">
+  <div class="list st-idx">${idx.map(([h, i, cl, t, sub, id]) => `<a class="row" href="${h}"${id ? ` id="${id}"` : ''}>${iconTile(i, cl, 18)}<div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div><span class="chev">›</span></a>`).join('')}</div>
+  </section>
+  <section class="sg${hid('ai')}" data-s="ai">
   <div class="card">
-    <div class="notice info small">AI 用于：出试卷、批改主观题、图片/扫描版 PDF 识别、生成卡片、举一反三。</div>
+    <div class="small muted" style="margin:0 2px 12px">AI 用于出题、批改、图片识别、生成卡片。不填也能用全部基础功能。</div>
     <label class="f"><span>服务商</span><select id="aP">${Object.entries(AI_PRESETS).map(([k, x]) => `<option value="${k}" ${k === c.preset ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
     <div class="small muted" id="aNote" style="margin:-4px 2px 12px">${esc(p.note)}${p.site ? ` <a href="${p.site}" target="_blank" rel="noopener noreferrer">获取 API Key ↗</a>` : ''}</div>
     <label class="f"><span>接口地址 Base URL</span><input type="url" id="aU" value="${esc(c.baseUrl)}" placeholder="https://api.example.com/v1" autocapitalize="off" autocorrect="off"></label>
     <label class="f"><span>API Key</span><span class="key-row"><input type="password" id="aK" placeholder="sk-..." autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-lpignore="true"><button type="button" class="btn small plain" id="aKs" aria-label="显示或隐藏 API Key">显示</button></span></label>
     <div class="key-tools"><span class="small muted" id="aKst">${c.apiKey ? '已保存 Key：' + esc(maskKey(c.apiKey)) : '尚未填写 Key'}</span><button type="button" class="btn small danger" id="aKc" ${c.apiKey ? '' : 'disabled'}>清除 API Key</button></div>
-    <div class="grid2"><label class="f"><span>文字模型</span><input type="text" id="aM" value="${esc(c.model)}" autocapitalize="off" autocorrect="off"></label><label class="f"><span>视觉模型（图片识别）</span><input type="text" id="aV" value="${esc(c.visionModel)}" placeholder="留空则用文字模型" autocapitalize="off" autocorrect="off"></label></div>
-    <div class="grid2"><label class="f"><span>出题时教材最多字数</span><input type="number" id="aC" value="${c.maxChars}" inputmode="numeric"></label><div class="row" style="padding:0;border:0;min-height:0;margin-top:22px"><div class="grow small">JSON 模式</div><label class="switch"><input type="checkbox" id="aJ" ${c.jsonMode ? 'checked' : ''}><span></span></label></div></div>
+    <label class="f"><span>文字模型</span><input type="text" id="aM" value="${esc(c.model)}" autocapitalize="off" autocorrect="off"></label>
+    <details class="adv"><summary>高级选项</summary><label class="f"><span>视觉模型（图片识别）</span><input type="text" id="aV" value="${esc(c.visionModel)}" placeholder="留空则用文字模型" autocapitalize="off" autocorrect="off"></label>
+    <div class="grid2"><label class="f"><span>出题时教材最多字数</span><input type="number" id="aC" value="${c.maxChars}" inputmode="numeric"></label><div class="row" style="padding:0;border:0;min-height:0;margin-top:22px"><div class="grow small">JSON 模式</div><label class="switch"><input type="checkbox" id="aJ" ${c.jsonMode ? 'checked' : ''}><span></span></label></div></div></details>
     <div class="btns"><button class="btn plain" id="aT">测试连接</button><button class="btn" id="aS">保存</button></div>
     <div id="aR" style="margin-top:10px"></div>
     <details class="privacy"><summary>🔒 API Key 隐私说明</summary><ul class="small">
@@ -92,29 +101,33 @@ route('/me/settings', 'me', v => {
       <li>建议为本应用<b>单独创建一个 Key，并在服务商后台设置消费上限/余额提醒</b>，不要使用主账号的 Key。</li>
       <li>如果手机丢失或怀疑泄露：登录服务商控制台（API Keys 页面）<b>删除/停用这个 Key</b> 即可立刻失效，再新建一个填回来。</li>
     </ul></details>
-  </div>
+  </div></section>
+  <section class="sg${cur ? ' hidden' : ''}" data-s="">
   <h3>外观</h3><div class="card"><div class="seg" id="th" style="margin:0">${[['auto', '跟随系统'], ['light', '浅色'], ['dark', '深色']].map(([k, l]) => `<button data-k="${k}" class="${S.settings.theme === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-    <label class="f" style="margin:12px 0 0"><span>我的称呼</span><input type="text" id="nm" value="${esc(S.settings.name)}" placeholder="用于首页问候"></label></div>
-  <h3>🃏 卡片复习</h3><div class="card"><label class="f" style="margin:0"><span>每个卡组每天新卡上限</span><input type="number" id="np" value="${S.settings.cards.newPerDay}" inputmode="numeric"></label>
+    <label class="f" style="margin:12px 0 0"><span>我的称呼</span><input type="text" id="nm" value="${esc(S.settings.name)}" placeholder="用于首页问候"></label></div></section>
+  <section class="sg${hid('study')}" data-s="study">
+  <h3>卡片复习</h3><div class="card"><label class="f" style="margin:0"><span>每个卡组每天新卡上限</span><input type="number" id="np" value="${S.settings.cards.newPerDay}" inputmode="numeric"></label>
     <label class="f" style="margin:12px 0 0"><span>FSRS 目标记住率：<b id="rtv">${Math.round((S.settings.cards.retention || .9) * 100)}%</b></span><input type="range" id="rtn" min="0.8" max="0.97" step="0.01" value="${S.settings.cards.retention || .9}"></label>
-    <div class="small muted">默认 90%。调高 → 记得更牢但每天复习更多；调低 → 复习更少但更容易忘。旧卡片的 SM-2 进度会在下次复习时自动换算为 FSRS 记忆状态。</div></div>
+    <div class="small muted">默认 90%。调高记得更牢，但每天复习更多。</div></div>
   <h3>科目</h3><div class="list" id="sl">${S.settings.subjects.map((s, i) => `<div class="row" data-i="${i}"><input type="color" value="${esc(safeColor(s.color, '#8e8e93'))}" data-k="color" style="width:36px;height:36px;border:0;padding:0;background:none;border-radius:50%"><input type="text" value="${esc(s.name)}" data-k="name" style="flex:1"><button class="icon-btn" data-k="del" style="color:var(--bad);font-size:22px">⊖</button></div>`).join('')}</div>
   <button class="btn ghost block" id="addSub">＋ 添加科目</button>
-  <button class="btn ghost block" id="fresh" style="margin-top:8px">${icon('cap', 18)} 应用大一课程预设（高数 / 线代 / 英语 / 物理 / C语言 / 思政）</button>
-  <h3>复习提醒</h3><div class="card" id="rmd">
-    <div class="row" style="padding:0;border:0;min-height:44px"><div class="grow"><div class="t">开启复习提醒</div><div class="s">打开 App 时显示横幅和角标</div></div><label class="switch"><input type="checkbox" id="rEn" ${R.enabled ? 'checked' : ''}><span></span></label></div>
-    <div class="grid2" style="margin-top:8px"><label class="f"><span>早上提醒</span><input type="time" id="rM" value="${esc(R.morning)}"></label><label class="f"><span>晚上提醒</span><input type="time" id="rE" value="${esc(R.evening)}"></label></div>
-    <div class="row" style="padding:0;border:0;min-height:44px"><div class="grow"><div class="t">到点弹出系统通知</div><div class="s">仅在 App 打开或切回前台时触发</div></div><label class="switch"><input type="checkbox" id="rN" ${R.notify ? 'checked' : ''}><span></span></label></div>
-    <div class="btns" style="margin-top:10px"><button class="btn plain" id="ntf">${'Notification' in window ? (Notification.permission === 'granted' ? '✅ 已允许通知' : '允许通知') : '不支持通知'}</button><button class="btn" id="ics">${icon('calendar', 18)} 添加到日历</button></div>
-    <div class="small muted" style="margin-top:10px"><b>最可靠的方式是「添加到日历」</b>：会生成一个每天按上面时间重复的日历提醒（.ics），由 iPhone 日历负责准时响铃，即使 App 没打开也会提醒。网页 App 没有服务器，关闭后不能自己定时推送（详见「使用说明」）。改了时间后需重新添加。</div></div>
-  <h3>林遥学姐</h3><div class="list"><a class="row" href="#/chat?set=1" id="lnSet"><div class="grow"><div class="t">聊天、称呼、恋爱模式与记忆</div><div class="s">好感度 ${esc(Lin.level().name)} · 记得 ${S.mems.length} 件事</div></div><span class="chev">›</span></a></div>
-  <h3>语音朗读</h3><div class="card">${TTS.ok ? `
-    <label class="f"><span>语速 <b id="rtv">${T.rate.toFixed(1)}×</b></span><input type="range" id="tR" min="0.5" max="1.5" step="0.1" value="${T.rate}"></label>
+  <details class="adv"><summary>大一课程预设</summary><button class="btn plain block" id="fresh">${icon('cap', 18)} 应用预设（高数 / 线代 / 英语 / 物理 / C语言 / 思政）</button></details>
+    <h3>朗读</h3><div class="card">${TTS.ok ? `
+    <label class="f"><span>语速 <b id="trv">${T.rate.toFixed(1)}×</b></span><input type="range" id="tR" min="0.5" max="1.5" step="0.1" value="${T.rate}"></label>
     <div class="row" style="padding:0;border:0;min-height:44px"><div class="grow"><div class="t">卡片自动朗读</div><div class="s">复习时自动读出卡片正面</div></div><label class="switch"><input type="checkbox" id="tA" ${T.autoplay ? 'checked' : ''}><span></span></label></div>
     <div class="row" style="padding:0;border:0;min-height:44px"><div class="grow"><div class="t">翻面后朗读背面</div></div><label class="switch"><input type="checkbox" id="tB" ${T.autoBack ? 'checked' : ''}><span></span></label></div>
-    <div class="grid2" style="margin-top:8px"><label class="f"><span>英文声音</span><select id="tEn"><option value="">自动</option>${vs('en')}</select></label><label class="f"><span>中文声音</span><select id="tZh"><option value="">自动</option>${vs('zh')}</select></label></div>
+    <details class="adv"><summary>声音选择</summary><div class="grid2"><label class="f"><span>英文声音</span><select id="tEn"><option value="">自动</option>${vs('en')}</select></label><label class="f"><span>中文声音</span><select id="tZh"><option value="">自动</option>${vs('zh')}</select></label></div>
     <div class="btns"><button class="btn plain" id="tTe">试听英文</button><button class="btn plain" id="tTz">试听中文</button></div>
-    <div class="small muted" style="margin-top:8px">自动识别中英文并切换声音。iPhone 可在「设置 → 辅助功能 → 朗读内容 → 声音」下载更自然的增强版声音（如 Samantha、婷婷）。</div>` : '<div class="small muted">当前浏览器不支持语音合成。</div>'}</div>`;
+    <div class="small muted" style="margin-top:8px">iPhone 可在「设置 → 辅助功能 → 朗读内容 → 声音」下载更自然的增强版声音。</div></details>` : '<div class="small muted">当前浏览器不支持语音合成。</div>'}</div>
+  </section>
+  <section class="sg${hid('remind')}" data-s="remind">
+  <h3>提醒</h3><div class="card" id="rmd">
+    <div class="row" style="padding:0;border:0;min-height:44px"><div class="grow"><div class="t">学姐主动提醒</div><div class="s">上课前 10 分钟、待复习、晚上复习、该睡觉了</div></div><label class="switch"><input type="checkbox" id="rEn" ${R.enabled ? 'checked' : ''}><span></span></label></div>
+    <div class="grid2" style="margin-top:8px"><label class="f"><span>早上提醒</span><input type="time" id="rM" value="${esc(R.morning)}"></label><label class="f"><span>晚上提醒</span><input type="time" id="rE" value="${esc(R.evening)}"></label></div>
+    <div class="row" style="padding:0;border:0;min-height:44px"><div class="grow"><div class="t">到点弹出系统通知</div><div class="s">仅在 App 打开或切回前台时触发</div></div><label class="switch"><input type="checkbox" id="rN" ${R.notify ? 'checked' : ''}><span></span></label></div>
+    <div class="btns" style="margin-top:10px"><button class="btn plain" id="ntf">${'Notification' in window ? (Notification.permission === 'granted' ? '✅ 已允许通知' : '允许通知') : '不支持通知'}</button><button class="btn" id="ics">${icon('calendar', 18)} 添加到 iPhone 日历</button></div>
+    <div class="small muted" style="margin-top:10px">学姐提醒只在 App 打开时出现。想关掉 App 也准时响，点「添加到 iPhone 日历」，一次导入课表、考试和每日复习提醒（课表改了需重新添加）。</div></div>
+  </section>`;
   const fill = k => { const x = AI_PRESETS[k]; if (k !== 'custom') { $('#aU').value = x.baseUrl; $('#aM').value = x.model; $('#aV').value = x.visionModel; } $('#aNote').innerHTML = `${esc(x.note)}${x.site ? ` <a href="${x.site}" target="_blank" rel="noopener noreferrer">获取 API Key ↗</a>` : ''}`; };
   $('#aP').onchange = e => fill(e.target.value);
   $('#aK').value = c.apiKey || ''; // 通过属性赋值，不把 Key 写进 HTML 文本
@@ -142,9 +155,9 @@ route('/me/settings', 'me', v => {
   $('#rN').onchange = e => { R.notify = e.target.checked; saveSettings(); };
   $('#rM').onchange = e => { R.morning = e.target.value; saveSettings(); };
   $('#rE').onchange = e => { R.evening = e.target.value; saveSettings(); };
-  $('#ics').onclick = () => Remind.exportIcs();
+  $('#ics').onclick = () => Remind.exportAll();
   if (TTS.ok) {
-    $('#tR').oninput = e => { T.rate = +e.target.value; $('#rtv').textContent = T.rate.toFixed(1) + '×'; saveSettings(); };
+    $('#tR').oninput = e => { T.rate = +e.target.value; $('#trv').textContent = T.rate.toFixed(1) + '×'; saveSettings(); };
     $('#tA').onchange = e => { T.autoplay = e.target.checked; saveSettings(); };
     $('#tB').onchange = e => { T.autoBack = e.target.checked; saveSettings(); };
     $('#tEn').onchange = e => { T.enVoice = e.target.value; saveSettings(); };
@@ -155,7 +168,7 @@ route('/me/settings', 'me', v => {
   $('#ntf').onclick = async () => { if (!('Notification' in window)) return toast(isIOS() ? '请先添加到主屏幕，并从主屏幕图标打开后再开启' : '当前浏览器不支持通知'); const r = await Notification.requestPermission(); toast(r === 'granted' ? '已允许通知' : '未获得通知权限'); rerender(); };
 });
 route('/me/backup', 'me', v => {
-  setTop('备份与恢复', { back: '#/me' });
+  setTop('数据备份', { back: '#/me/settings' });
   const size = new Blob([JSON.stringify(Object.fromEntries(COLLECTIONS.map(c => [c, S[c]])))]).size;
   v.innerHTML = `<div class="notice">所有数据都只保存在<b>这台设备的浏览器</b>里。清除 Safari 网站数据、删除主屏幕 App 或长期不用（iOS 可能清理）都可能导致数据丢失，请定期导出备份。</div>
   <div class="card"><b>导出备份</b><div class="small muted" style="margin:4px 0 10px">当前数据约 ${(size / 1024).toFixed(0)} KB（${S.notes.length} 笔记、${S.cards.length} 卡片、${S.books.length} 教材、${S.exams.length} 试卷、${S.wrongs.length} 错题、${S.sessions.length} 专注记录）</div>
@@ -221,7 +234,7 @@ route('/me/about', 'me', v => {
 
 ## 数据存储
 - 所有数据保存在本机浏览器（IndexedDB），不上传任何服务器
-- 「我的 → 备份与恢复」可导出 / 导入 JSON 备份，换手机时用它迁移
+- 「我的 → 设置 → 数据备份」可导出 / 导入 JSON 备份，换手机时用它迁移
 - Safari 里打开的版本和主屏幕 App 的数据**互相独立**
 
 ## AI 功能
@@ -258,7 +271,7 @@ route('/me/about', 'me', v => {
 ## 复习提醒（重要说明）
 - **App 打开时**：首页横幅 + 底部角标（支持的设备上主屏幕图标也会显示数字）
 - **App 在前台时**：到了设置的早 / 晚时间会弹出通知
-- **App 关闭后**：网页无法自己定时推送。推荐在设置里点「添加到日历」，由 iPhone 日历每天准时提醒
+- **App 关闭后**：网页无法自己定时推送。推荐在设置里点「添加到 iPhone 日历」，课表、临时安排和每天的复习提醒都会由 iPhone 日历准时提醒（课表变了需要重新添加）
 - 真正的后台推送（Web Push）需要：一台推送服务器（保存 VAPID 密钥）、保存每台设备的推送订阅、服务器端定时任务按时发送；iPhone 还要求 iOS 16.4+、从主屏幕打开并授权通知。本 App 为纯本地、无服务器设计，所以暂未提供
 `)}</div><p class="small muted" style="text-align:center">学习工作台 v1.1</p>`;
 });
@@ -310,8 +323,8 @@ function seed() {
   seedCET4();
   S.todos.push({ id: uid(), title: '试试番茄钟：专注 25 分钟', note: '', due: dayKey(), priority: 2, subject: '', done: false, createdAt: now, estimate: 25 });
   S.todos.push({ id: uid(), title: '复习「四级核心词汇」卡组（可开自动朗读）', note: '', due: dayKey(), priority: 1, subject: 'english', done: false, createdAt: now + 1, estimate: 10 });
-  S.todos.push({ id: uid(), title: '用示例教材「高数 · 函数与极限」出一份 AI 小测', note: '学习 → AI 出卷 → 选择教材章节', due: dayKey(), priority: 1, subject: 'math', done: false, createdAt: now + 2, estimate: 20 });
-  S.todos.push({ id: uid(), title: '导入本学期课本（高数 / 线代 / C语言）', note: '在「学习 → 教材导入」导入 PDF、拍照或粘贴文本', due: dayKey(now + DAY), priority: 0, subject: '', done: false, createdAt: now + 3 });
+  S.todos.push({ id: uid(), title: '用示例教材「高数 · 函数与极限」出一份 AI 小测', note: '学习 → AI 出题 → 选择教材章节', due: dayKey(), priority: 1, subject: 'math', done: false, createdAt: now + 2, estimate: 20 });
+  S.todos.push({ id: uid(), title: '导入本学期课本（高数 / 线代 / C语言）', note: '在「学习 → 教材与笔记」导入 PDF、拍照或粘贴文本', due: dayKey(now + DAY), priority: 0, subject: '', done: false, createdAt: now + 3 });
   S.notes.push({ id: uid(), title: '欢迎使用学习工作台 👋', subject: '', body: `# 笔记支持 Markdown 和公式\n\n- **加粗**、==高亮==、\`代码\`\n- [ ] 待办事项\n> 学而不思则罔，思而不学则殆\n\n## 数学公式（LaTeX）\n行内公式：重要极限 $\\lim_{x\\to 0}\\frac{\\sin x}{x}=1$，欧拉公式 $e^{i\\pi}+1=0$\n\n独立公式：\n$$\\int_a^b f(x)\\,dx = F(b)-F(a)$$\n\n$$A=\\begin{pmatrix}1&2\\\\3&4\\end{pmatrix},\\quad |A|=-2$$\n\n## 把笔记变成卡片\n导数定义 :: $f'(x_0)=\\lim_{\\Delta x\\to0}\\frac{f(x_0+\\Delta x)-f(x_0)}{\\Delta x}$\n第二个重要极限 :: $\\lim_{x\\to\\infty}\\left(1+\\frac1x\\right)^x=e$\n\n写成「问题 :: 答案」的行，可在右上角「⋯」里一键生成卡片。`, pinned: true, createdAt: now, updatedAt: now });
   S.books.push({ id: uid(), title: '示例教材 · 高等数学 第一章 函数与极限', subject: 'math', source: 'text', createdAt: now, chapters: [
     { id: uid(), title: '1.1 映射与函数', text: '函数的定义：设数集 $D\\subset\\mathbb{R}$，若对每个 $x\\in D$，按照对应法则 $f$ 总有唯一确定的 $y$ 与之对应，则称 $y=f(x)$ 为定义在 $D$ 上的函数，$D$ 称为定义域。\n函数的特性：有界性、单调性、奇偶性（$f(-x)=f(x)$ 为偶函数，$f(-x)=-f(x)$ 为奇函数）、周期性。\n反函数：若 $f$ 是 $D$ 到 $f(D)$ 的单射，则存在逆映射 $f^{-1}$，其图形与 $y=f(x)$ 关于直线 $y=x$ 对称。\n基本初等函数：幂函数、指数函数、对数函数、三角函数、反三角函数。由常数和基本初等函数经过有限次四则运算和复合所得的函数称为初等函数。' },

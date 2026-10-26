@@ -34,11 +34,11 @@ const AI = {
     return s.replace(/Bearer\s+[^\s"',]+/gi, 'Bearer ***').replace(/\b(sk|ak|key)-[A-Za-z0-9_\-]{6,}/gi, '$1-***').replace(/AIza[0-9A-Za-z_\-]{20,}/g, 'AIza***');
   },
   url() {
-    const c = this.cfg(); const bad = this.checkUrl(c.baseUrl); if (bad) throw new AIError(bad + '。请到「我的 → 设置 → AI 设置」修改。', 'config');
+    const c = this.cfg(); const bad = this.checkUrl(c.baseUrl); if (bad) throw new AIError(bad + '。请到「我的 → 设置 → AI 与隐私」修改。', 'config');
     let b = c.baseUrl.trim().replace(/\/+$/, ''); if (/\/chat\/completions$/.test(b)) return b; return b + '/chat/completions';
   },
   async chat(messages, { json = false, signal, temperature = 0.4, model, maxTokens } = {}) {
-    const c = this.cfg(); if (!this.ready()) throw new AIError('还没有配置 AI。请到「我的 → 设置 → AI 设置」填写接口地址、API Key 和模型名。', 'config');
+    const c = this.cfg(); if (!this.ready()) throw new AIError('还没有配置 AI。请到「我的 → 设置 → AI 与隐私」填写接口地址、API Key 和模型名。', 'config');
     const body = { model: model || c.model, messages, temperature, stream: false };
     if (maxTokens) body.max_tokens = maxTokens;
     if (json && c.jsonMode) body.response_format = { type: 'json_object' };
@@ -78,7 +78,7 @@ const AI = {
   },
   /** 流式对话（SSE）。onDelta(片段, 累计全文)；服务商不支持流式时自动按普通 JSON 解析 */
   async stream(messages, { signal, temperature = 0.8, maxTokens, onDelta = () => { } } = {}) {
-    const c = this.cfg(); if (!this.ready()) throw new AIError('还没有配置 AI。请到「我的 → 设置 → AI 设置」填写接口地址、API Key 和模型名。', 'config');
+    const c = this.cfg(); if (!this.ready()) throw new AIError('还没有配置 AI。请到「我的 → 设置 → AI 与隐私」填写接口地址、API Key 和模型名。', 'config');
     const body = { model: c.model, messages, temperature, stream: true }; if (maxTokens) body.max_tokens = maxTokens;
     const ctl = new AbortController(); let to = setTimeout(() => ctl.abort('timeout'), 90000);
     if (signal) signal.addEventListener('abort', () => ctl.abort('user'));
@@ -138,7 +138,7 @@ const AI = {
 function showAIError(e) {
   const msg = AI.redact(e instanceof AIError ? e.message : ('出错了：' + (e?.message || e)));
   if (e?.kind === 'abort' && e.message === '已取消') return toast('已取消');
-  openSheet(`<h2>😕 AI 调用失败</h2><div class="notice err pre">${esc(msg)}</div><div class="btns"><a class="btn plain" href="#/me/settings" data-close-sheet>去设置</a><button class="btn" data-close-sheet>知道了</button></div>`);
+  openSheet(`<h2>😕 AI 调用失败</h2><div class="notice err pre">${esc(msg)}</div><div class="btns"><a class="btn plain" href="#/me/settings?s=ai" data-close-sheet>去设置</a><button class="btn" data-close-sheet>知道了</button></div>`);
 }
 async function withLoading(text, fn) {
   const ctl = new AbortController(); loading(true, text, ctl);

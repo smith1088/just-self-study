@@ -4,7 +4,7 @@ let noteQuery = '', noteTag = '';
 function allNoteTags() { const m = {}; S.notes.forEach(n => (n.tags || []).forEach(t => m[t] = (m[t] || 0) + 1)); return Object.entries(m).sort((a, b) => b[1] - a[1]).map(x => x[0]); }
 function parseTags(s) { return [...new Set(String(s || '').split(/[,，\s#]+/).map(x => x.trim()).filter(Boolean))]; }
 route('/learn/notes', 'learn', v => {
-  setTop('笔记', { back: '#/learn', actions: `<button class="icon-btn" id="addNote" aria-label="新建">＋</button>` });
+  setTop('教材与笔记', { back: '#/learn', actions: `<button class="icon-btn" id="addNote" aria-label="新建">＋</button>` });
   const newNote = () => { const n = { id: uid(), title: '', body: '', tags: [], subject: '', pinned: false, createdAt: Date.now(), updatedAt: Date.now() }; S.notes.push(n); save('notes'); location.hash = '#/learn/note/' + n.id + '/edit'; };
   $('#addNote').onclick = newNote;
   const draw = () => {
@@ -18,10 +18,9 @@ route('/learn/notes', 'learn', v => {
     }).join('')}</div>` : `${q || noteTag ? emptyState('search', '没有找到匹配的笔记') : emptyState('notes', '还没有笔记', '点右上角 ＋ 新建，支持 Markdown 与 LaTeX 公式。')}`;
   };
   const tags = allNoteTags();
-  v.innerHTML = `<div class="searchbar"><input type="search" id="nq" placeholder="搜索标题、内容、标签" value="${esc(noteQuery)}"></div>
+  v.innerHTML = `${bnSeg('notes')}<div class="searchbar"><input type="search" id="nq" placeholder="搜索标题、内容、标签" value="${esc(noteQuery)}"></div>
     ${tags.length ? `<div class="chips" id="nt" style="margin-bottom:12px"><button class="chip ${!noteTag ? 'sel' : ''}" data-t="">全部</button>${tags.map(t => `<button class="chip ${noteTag === t ? 'sel' : ''}" data-t="${esc(t)}">#${esc(t)}</button>`).join('')}</div>` : ''}
-    <div id="nl"></div><button class="fab" id="fab" aria-label="新建笔记">＋</button>`;
-  $('#fab').onclick = newNote;
+    <div id="nl"></div>`;
   $('#nq').oninput = e => { noteQuery = e.target.value; draw(); };
   const nt = $('#nt'); if (nt) nt.onclick = e => { const b = e.target.closest('button'); if (b) { noteTag = b.dataset.t; rerender(); } };
   draw();

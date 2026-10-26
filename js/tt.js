@@ -217,7 +217,7 @@ const TT = {
     const now = Date.now(); const done = new Set(S.meta.ttN || []); let changed = false;
     for (const e of S.events) {
       if (!e.remind) continue; const at = this.evTs(e) - (e.allDay && e.remind >= 1440 ? 15 * 3600000 : e.remind * 60000); const key = e.id + '@' + e.date + e.start;
-      if (now >= at && now < this.evTs(e) + (e.allDay ? DAY : 0) && !done.has(key)) { done.add(key); changed = true; Remind.notify(`${(TT_TYPES[e.type] || TT_TYPES.other).n}提醒`, `${e.title}${e.allDay ? '' : ' · ' + e.start}${e.room ? ' · ' + e.room : ''}`); }
+      if (now >= at && now < this.evTs(e) + (e.allDay ? DAY : 0) && !done.has(key)) { done.add(key); changed = true; const body = `${e.title}${e.allDay ? '' : ' · ' + e.start}${e.room ? ' · ' + e.room : ''}`; const o = Remind.lin('ev', { body }); Remind.notify(`${(TT_TYPES[e.type] || TT_TYPES.other).n}提醒`, o.text, { ...o, href: '#/learn/tt', go: '看安排' }); }
     }
     if (changed) { S.meta.ttN = [...done].slice(-300); DB.set('meta', S.meta); }
   }
@@ -304,7 +304,7 @@ function ttImportSheet() {
   const aiOk = AI.ready() || AI.visionReady();
   openSheet(`<h2>导入课表</h2>
     <button class="btn block big" id="iPh">${icon('camera', 18)} 拍照 / 选择课表截图</button>
-    <div class="small muted tt-hint">在教务系统里打开「我的课表」截一张完整的图。${aiOk ? '' : '<br><b>需要先在「设置 → AI 设置」配置 AI</b>（推荐带图片识别的模型）。'}</div>
+    <div class="small muted tt-hint">在教务系统里打开「我的课表」截一张完整的图。${aiOk ? '' : '<br><b>需要先在「设置 → AI 与隐私」配置 AI</b>（推荐带图片识别的模型）。'}</div>
     <div class="tt-links"><button class="link" id="iTx">粘贴文字</button><span>·</span><button class="link" id="iMan">手动添加一门课</button></div>
     <details class="tt-more"><summary>更多方式</summary><div class="btns"><button class="btn small plain" id="iIcs">导入 .ics 日历文件</button><button class="btn small plain" id="iCsv">导入 CSV（Excel 另存为 CSV）</button></div></details>`, el => {
     $('#iPh', el).onclick = ttImportPhoto;
@@ -315,7 +315,7 @@ function ttImportSheet() {
   });
 }
 async function ttImportPhoto() {
-  if (!AI.ready() && !AI.visionReady()) return showAIError(new AIError('识别课表截图需要先配置 AI。请到「我的 → 设置 → AI 设置」填写（推荐硅基流动 / 通义千问等带图片识别的服务商）。也可以选「手动添加一门课」。', 'config'));
+  if (!AI.ready() && !AI.visionReady()) return showAIError(new AIError('识别课表截图需要先配置 AI。请到「我的 → 设置 → AI 与隐私」填写（推荐硅基流动 / 通义千问等带图片识别的服务商）。也可以选「手动添加一门课」。', 'config'));
   const [f] = await pickFile('image/*'); if (!f) return; closeSheet(true);
   try {
     const img = await compressImage(f, 2200, 0.88);

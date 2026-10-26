@@ -51,7 +51,8 @@ const DEFAULT_SETTINGS = {
   remind: { enabled: true, morning: '08:00', evening: '21:00', notify: true },
   ai: { preset: 'deepseek', baseUrl: 'https://api.deepseek.com', apiKey: '', model: 'deepseek-chat', visionModel: '', jsonMode: true, maxChars: 12000 },
   tt: { start: '', periods: [] },
-  lin: { romance: true, nick: '', tts: false, greet: true, pts: {} },
+  lin: { romance: true, nick: '', tts: false, greet: true, pts: {}, outfit: 'auto' },
+  cet: { date: '', deckId: '' },
   name: ''
 };
 const S = { settings: null }; COLLECTIONS.forEach(c => S[c] = []);

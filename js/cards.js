@@ -86,9 +86,9 @@ route('/learn/decks', 'learn', v => {
   $('#addDeck').onclick = () => editDeck();
   const tot = Cards.dueTotal();
   v.innerHTML = `<div class="card" style="display:flex;align-items:center;gap:12px"><div class="grow" style="flex:1"><b>今日待复习</b><div class="small muted">${tot ? `共 ${tot} 张（含新卡）` : '今天的复习已全部完成 👏'}</div></div><a class="btn ${tot ? '' : 'plain'}" href="#/learn/review/all">${tot ? '全部复习' : '再看看'}</a></div>
-  ${S.cards.length ? `<a class="row card" href="#/learn/cards-browse" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">${iconTile('search', 'var(--info)', 18)}<div class="grow" style="flex:1"><b>卡片浏览器</b><div class="small muted">跨卡组搜索 · 按到期 / 难度 / 易忘筛选</div></div><span class="chev">›</span></a>` : ''}
+  ${S.cards.length ? `<a class="row card" href="#/learn/cards-browse" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">${iconTile('search', 'var(--info)', 18)}<div class="grow" style="flex:1"><b>卡片浏览器</b><div class="small muted">搜索与筛选全部卡片</div></div><span class="chev">›</span></a>` : ''}
   ${S.decks.length ? `<div class="list">${S.decks.map(d => { const c = deckDue(d); return `<a class="row" href="#/learn/deck/${d.id}"><div class="grow"><div class="t">${esc(d.name)}</div><div class="s">${c.total} 张 · 新卡 <b style="color:var(--info)">${c.newToday}</b> · 学习中 <b style="color:var(--bad)">${c.learn}</b> · 待复习 <b style="color:var(--ok)">${c.due}</b></div></div>${subjChip(d.subject)}<span class="chev">›</span></a>`; }).join('')}</div>` : `${emptyState('cards', '还没有卡组', '点右上角 ＋ 创建卡组，或在笔记里用「问题 :: 答案」一键生成。')}`}
-  <p class="small muted" style="margin:6px 4px">采用 <b>FSRS</b> 记忆算法（Anki 新一代算法）：根据每张卡的记忆稳定性和难度，在你快要忘记时安排复习，目标记住率 ${Math.round((S.settings.cards.retention || 0.9) * 100)}%。默认每个卡组每天 ${S.settings.cards.newPerDay} 张新卡（可在设置或卡组选项中修改）。</p>`;
+  <p class="small muted" style="margin:10px 4px">FSRS 记忆算法会在你快忘记时安排复习。</p>`;
 });
 /* 卡片浏览器（Anki Browse）：跨卡组搜索、筛选、排序 */
 route('/learn/cards-browse', 'learn', v => {

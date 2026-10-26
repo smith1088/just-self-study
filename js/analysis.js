@@ -139,7 +139,7 @@ function weeklyPlanSheet(A) {
     items.push({ day: i, title: `专项练习：${sn}${o.kp}`, note: `薄弱点（错误率 ${pctS(o.rate)}，未掌握 ${o.unmastered} 题）。到「学习 → 错题本 → 薄弱点分析」点开该知识点做专项练习。`, priority: 2, subject: o.subject, estimate: 30, tag: `weak:${o.id}:p` });
     items.push({ day: Math.min(6, i + 3), title: `回顾：${sn}${o.kp} 错题复习`, note: '间隔复习：重做/复习该知识点的错题，连续两次做对即标记掌握。', priority: 1, subject: o.subject, estimate: 15, tag: `weak:${o.id}:r` });
   });
-  if (top.length) { const ss = [...new Set(top.map(o => o.subject).filter(Boolean))].slice(0, 2); items.push({ day: 6, title: `周末限时模拟：${ss.map(s => subj(s).name).join(' / ') || '综合'}`, note: '在「学习 → AI 出卷」选择模拟考试预设，限时完成并查看成绩趋势。', priority: 2, subject: ss[0] || '', estimate: 90, tag: 'weak:mock' }); }
+  if (top.length) { const ss = [...new Set(top.map(o => o.subject).filter(Boolean))].slice(0, 2); items.push({ day: 6, title: `周末限时模拟：${ss.map(s => subj(s).name).join(' / ') || '综合'}`, note: '在「学习 → AI 出题」选择模拟考试预设，限时完成并查看成绩趋势。', priority: 2, subject: ss[0] || '', estimate: 90, tag: 'weak:mock' }); }
   for (let d = 0; d < 7; d++) items.push({ day: d, title: '错题复习 10 分钟', note: '打开错题本 → 错题复习。', priority: 0, subject: '', estimate: 10, tag: 'weak:daily' });
   items.forEach(it => { it.due = dayKey(t0 + it.day * DAY); it.planTag = `${wk}|${it.tag}|${it.due}`; it.exists = S.todos.some(t => t.planTag === it.planTag); });
   items.sort((a, b) => a.day - b.day || b.priority - a.priority);

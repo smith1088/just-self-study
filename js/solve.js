@@ -28,7 +28,7 @@ route('/learn/solve', 'learn', v => {
       <div class="btns" style="margin-top:12px"><button class="btn" id="cam">${icon('camera', 18)} 拍照</button><button class="btn ghost" id="alb">${icon('image', 18)} 相册</button></div>
       <button class="btn plain block" id="txt" style="margin-top:8px">${icon('edit', 18)} 手动输入题目</button>
     </div>
-    ${!AI.ready() ? `<div class="notice">讲解需要先配置 AI；识别图片需要支持图片的视觉模型（如 GPT-4o、Qwen-VL、GLM-4V）。<a href="#/me/settings">去设置</a></div>` : !AI.visionReady() ? `<div class="notice info">当前模型未配置视觉能力，可以先「手动输入题目」；在设置中填写视觉模型后即可拍照识别。</div>` : ''}
+    ${!AI.ready() ? `<div class="notice">讲解需要先配置 AI；识别图片需要支持图片的视觉模型（如 GPT-4o、Qwen-VL、GLM-4V）。<a href="#/me/settings?s=ai">去设置</a></div>` : !AI.visionReady() ? `<div class="notice info">当前模型未配置视觉能力，可以先「手动输入题目」；在设置中填写视觉模型后即可拍照识别。</div>` : ''}
     <h3>搜题记录</h3>
     ${list.length ? `<div class="list">${list.map(x => `<a class="row" href="#/learn/solve/${x.id}">${x.image ? `<img class="mini-thumb" src="${x.image}" alt="">` : `<span class="row-ic">${icon('edit', 18)}</span>`}<div class="grow"><div class="t">${esc(x.q.stem.replace(/\$+/g, '').slice(0, 40))}</div><div class="s">${fmtDateTime(x.createdAt)}${x.q.subject ? ' · ' + esc(subj(x.q.subject).name) : ''}${x.kp ? ' · ' + esc(x.kp) : ''}${x.wrongId ? ' · 已入错题本' : ''}</div></div><span class="chev">›</span></a>`).join('')}</div>` : emptyState('search', '还没有搜过题', '遇到不会的题，拍一下就能看到分步讲解。')}`;
   const fromImage = async (capture) => {

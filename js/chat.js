@@ -99,7 +99,7 @@ const Lin = {
 4. 不编造TA的数据，以【App 信息】为准；不要自称 AI 或语言模型。
 【辅导】你也是很棒的家教：可以讲题、解释概念、用卡片考TA（一次只问一题，等TA回答后再判断、讲解）。数学公式用 LaTeX：行内 $...$，独立 $$...$$。讲题可以分步骤、写长一点；闲聊保持简短。
 【说话风格】像微信聊天一样口语、自然；闲聊一般 1–3 句、不超过 80 字；动作写在括号里；偶尔用颜文字，不要句句带 emoji。称呼用户为「${n}」${ro && lv.i >= 3 ? '，也可以偶尔用更亲昵的叫法' : ''}。
-【输出格式】回复最开头必须写一个表情标签 [mood:xxx]，xxx 只能是：normal（平常）happy（开心）cheer（加油打气）encourage（安慰鼓励）sleepy（困了、深夜）shy（害羞、被夸、婉拒越界的话）pout（吃醋、TA偷懒时假装生气）gaze（托腮深情看着TA、温柔的时刻）。然后写正文。
+【输出格式】回复最开头必须写一个表情标签 [mood:xxx]，xxx 只能是：normal（平常）happy（开心）cheer（加油打气）encourage（安慰鼓励）sleepy（困了、深夜）shy（害羞、被夸、婉拒越界的话）pout（吃醋、TA偷懒时假装生气）gaze（托腮深情看着TA、温柔的时刻）night（深夜裹着毯子捧着热饮、催TA睡觉）surprised（惊讶、意外的好消息）wink（俏皮、开玩笑、小秘密）proud（为TA的成绩或进步骄傲）。然后写正文。
 如果TA告诉你值得长期记住的事（喜好、目标、考试安排等），在回复最末尾另起一行写 [记住:不超过30字的概括]；没有就不写。不记录密码、证件号、住址、手机号等隐私。
 【App 信息】
 ${this.context(userText)}`;
@@ -137,12 +137,13 @@ route('/chat', 'today', v => {
   const $l = s => $(s, v);
   const imgs = $$('#lcArt img', v); let curMood = '';
   MASCOT.moods.forEach(m => { const i = new Image(); i.src = MASCOT.src(m); });
+  const off0 = () => (imgs.find(i => i.classList.contains('on')) || imgs[0]).getAttribute('src');
   const setMood = m => {
     if (!MASCOT.moods.includes(m)) m = 'normal';
     const art = $l('#lcArt');
-    if (m === curMood) { art.classList.remove('hop'); void art.offsetWidth; art.classList.add('hop'); return; }
+    if (m === curMood && off0() === MASCOT.src(m)) { art.classList.remove('hop'); void art.offsetWidth; art.classList.add('hop'); return; }
     curMood = m; const on = imgs.find(i => i.classList.contains('on')) || imgs[0], off = imgs.find(i => i !== on);
-    off.src = MASCOT.src(m); off.alt = MASCOT.alt[m]; off.classList.add('on'); on.classList.remove('on');
+    off.src = MASCOT.src(m); off.alt = MASCOT.altOf(m); off.classList.add('on'); on.classList.remove('on');
     art.dataset.mood = m; art.classList.remove('hop'); void art.offsetWidth; art.classList.add('hop');
   };
   const drawAff = () => { const L = Lin.level(); $l('#lcLv').textContent = L.name; $l('#lcBar').style.width = Math.round(L.pct * 100) + '%'; $l('#lcHf').style.clipPath = `inset(${Math.round((1 - Math.max(.08, L.pct)) * 100)}% 0 0 0)`; $l('#lcAff').dataset.lv = L.i; };
@@ -170,8 +171,9 @@ route('/chat', 'today', v => {
   const levelUp = L => {
     setMood(Lin.romance() && L.i >= 2 ? 'gaze' : 'happy'); fx(14); fx(10, 's');
     const o = document.createElement('div'); o.className = 'lc-up'; o.id = 'lcUp';
-    o.innerHTML = `<div class="lc-up-c"><div class="lc-up-h">${LIN_HEART}<span class="lc-up-r"></span></div><div class="lc-up-k">好感度提升</div><div class="lc-up-n">${esc(L.name)}</div><p>${esc(L.unlock || '')}</p><button class="btn" id="lcUpOk">嗯！</button></div>`;
+    o.innerHTML = `<div class="lc-up-c"><div class="lc-up-h">${LIN_HEART}<span class="lc-up-r"></span></div><div class="lc-up-k">好感度提升</div><div class="lc-up-n">${esc(L.name)}</div><p>${esc(L.unlock || '')}</p>${Story.has(L.i) ? `<button class="btn" id="lcUpSt">${icon('sparkle', 16)} 看看新的回忆</button><button class="btn plain" id="lcUpOk">稍后再看</button>` : '<button class="btn" id="lcUpOk">嗯！</button>'}</div>`;
     $l('#lc').appendChild(o); $('#lcUpOk', o).onclick = () => o.remove();
+    const st = $('#lcUpSt', o); if (st) st.onclick = () => { o.remove(); Story.play(L.i); };
   };
   const afterGain = (g, why) => {
     drawAff(); if (!g.gain && !g.up) return; fx(Math.min(10, 3 + g.gain));
@@ -181,7 +183,7 @@ route('/chat', 'today', v => {
   /* --- 开场 --- */
   const lastA = [...S.chats].reverse().find(m => m.role === 'assistant');
   const lastT = S.chats.length ? S.chats[S.chats.length - 1].t : 0;
-  if (!AI.ready()) { say(Lin.noKey()); $l('#lcAct').innerHTML = `<a class="lc-go" href="#/me/settings">去设置 AI ›</a>`; }
+  if (!AI.ready()) { say(Lin.noKey()); $l('#lcAct').innerHTML = `<a class="lc-go" href="#/me/settings?s=ai">去设置 AI ›</a>`; }
   else if (lastA && Date.now() - lastT < 3 * 3600000) { say({ mood: lastA.mood || 'normal', text: lastA.content }); const u = [...S.chats].reverse().find(m => m.role === 'user'); if (u) showYou(u.content); }
   else say(Lin.greet());
   setTimeout(() => afterGain(Lin.check(), '你最近很认真，'), 600);
@@ -197,8 +199,9 @@ route('/chat', 'today', v => {
   async function send(text) {
     text = String(text || '').trim(); if (!text || busy) return;
     navigator.vibrate?.(8); $l('#lcAct').innerHTML = '';
-    if (!AI.ready()) { say(Lin.noKey()); $l('#lcAct').innerHTML = `<a class="lc-go" href="#/me/settings">去设置 AI ›</a>`; return; }
+    if (!AI.ready()) { say(Lin.noKey()); $l('#lcAct').innerHTML = `<a class="lc-go" href="#/me/settings?s=ai">去设置 AI ›</a>`; return; }
     if (!navigator.onLine) { $l('#lcYou').classList.add('hidden'); say(Lin.offline()); return; }
+    if (/晚安|睡了|睡觉/.test(text)) MASCOT.pin = 'hoodie';
     input.value = ''; fit(); showYou(text);
     S.chats.push({ id: uid(), role: 'user', content: text.slice(0, 1000), t: Date.now() }); capChats(); save('chats');
     busy = true; v.querySelector('#lc').classList.add('busy');
@@ -231,7 +234,7 @@ route('/chat', 'today', v => {
   $l('#lcMore').onclick = () => linSettings(() => render());
   $l('#lcAff').onclick = () => affSheet();
   if (Q.get('set')) setTimeout(() => linSettings(() => render()), 250);
-  return () => { ctl?.abort(); cancelAnimationFrame(tw.raf); };
+  return () => { ctl?.abort(); cancelAnimationFrame(tw.raf); MASCOT.pin = ''; };
 });
 let _chatFrom = '';
 window.addEventListener('hashchange', e => { if (location.hash.startsWith('#/chat') && e.oldURL) { const h = new URL(e.oldURL).hash; if (h && !h.startsWith('#/chat')) _chatFrom = h; } });
@@ -245,27 +248,30 @@ function chatLog() {
 function affSheet() {
   const L = Lin.level(), ro = Lin.romance();
   openSheet(`<h2>好感度</h2><div class="af">${LIN_LV.map((x, i) => `<div class="af-r ${i <= L.i ? 'got' : ''} ${i === L.i ? 'cur' : ''}"><span class="af-h">${LIN_HEART}</span><div class="grow"><b>${ro ? x.r : x.f}</b><div class="small">${esc((ro ? x.u : x.fu) || '一切的开始')}</div></div><span class="af-n num">${x.at}</span></div>`).join('')}</div>
-    <div class="notice info">当前 <b class="num">${L.a}</b> 点${L.left ? `，距下一阶段还差 <b class="num">${L.left}</b> 点` : '，已是最高阶段'}。<br>好感度主要来自认真学习：专注、复习卡片、完成计划、连续学习；和学姐聊天每天也能 +5。</div>
-    <div class="btns"><button class="btn" data-close-sheet>好</button></div>`);
+    <div class="notice info">当前 <b class="num">${L.a}</b> 点${L.left ? `，距下一阶段还差 <b class="num">${L.left}</b> 点` : '，已是最高阶段'}。<br>好感度主要来自认真学习：专注、复习卡片、完成计划、连续学习；和学姐聊天每天也能 +5。每升一级都会解锁一段回忆。</div>
+    <div class="btns"><a class="btn plain" href="#/me/album" data-close-sheet>回忆相册</a><button class="btn" data-close-sheet>好</button></div>`);
 }
 function linSettings(after) {
   const c = Lin.cfg();
   const memHtml = () => S.mems.length ? `<div class="list mem-l">${S.mems.slice().reverse().map(m => `<div class="row"><div class="grow">${esc(m.text)}</div><button class="icon-btn" data-mdel="${esc(m.id)}" aria-label="删除">${icon('xmark', 16)}</button></div>`).join('')}</div>` : '<p class="small">她还没有记住什么。聊天时告诉她你的喜好、目标或考试安排，她会悄悄记下来。</p>';
   openSheet(`<h2>和学姐聊天</h2>
-    <label class="f"><span>她怎么称呼你</span><input id="lnN" maxlength="12" value="${esc(c.nick || '')}" placeholder="${esc(S.settings.name || '同学')}"></label>
+    <label class="f"><span>她怎么称呼你</span><input type="text" id="lnN" maxlength="12" value="${esc(c.nick || '')}" placeholder="${esc(S.settings.name || '同学')}"></label>
     <div class="card" style="padding:4px 14px">
       <div class="row" style="padding:10px 0;border:0"><div class="grow"><div class="t">恋爱模式</div><div class="s">关闭后，她就是一位亲切的学习学姐</div></div><label class="switch"><input type="checkbox" id="lnR" ${c.romance !== false ? 'checked' : ''}><span></span></label></div>
       <div class="row" style="padding:10px 0;border:0"><div class="grow"><div class="t">朗读她的台词</div><div class="s">使用系统中文女声</div></div><label class="switch"><input type="checkbox" id="lnT" ${c.tts ? 'checked' : ''}><span></span></label></div>
       <div class="row" style="padding:10px 0;border:0"><div class="grow"><div class="t">每日问候</div><div class="s">每天第一次打开 App 时打个招呼</div></div><label class="switch"><input type="checkbox" id="lnG" ${c.greet !== false ? 'checked' : ''}><span></span></label></div>
+      <div class="row" style="padding:10px 0;border:0"><div class="grow"><div class="t">衣橱</div><div class="s">自动：深夜和说晚安时换上居家卫衣</div></div><select id="lnO" class="mini-sel">${[['auto', '自动'], ...Object.entries(MASCOT.outfits).map(([k, o]) => [k, o.name])].map(([k, n]) => `<option value="${k}" ${(c.outfit || 'auto') === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     </div>
+    <a class="row card al-row" href="#/me/album" id="lnAl">${icon('sparkle', 18)}<div class="grow"><div class="t">回忆相册</div><div class="s">已解锁 ${Story.unlocked().length} / ${Story.ids().length} 段回忆</div></div><span class="chev">›</span></a>
     <h3>她记得的事 <span class="sec-n">${S.mems.length}</span></h3><div id="lnM">${memHtml()}</div>
     <p class="small privacy-s">聊天记录和记忆只保存在这台设备上（会包含在备份里，不含 API Key）；聊天时只发送给你在 AI 设置里配置的服务商。</p>
     <div class="btns"><button class="btn plain danger" id="lnClr">清空聊天记录</button>${S.mems.length ? '<button class="btn plain danger" id="lnMc">清空记忆</button>' : ''}</div>
     <div class="btns"><button class="btn" id="lnOk">完成</button></div>`, el => {
+    $('#lnAl', el).onclick = () => closeSheet();
     $('#lnM', el).onclick = e => { const b = e.target.closest('[data-mdel]'); if (!b) return; S.mems = S.mems.filter(m => m.id !== b.dataset.mdel); save('mems'); $('#lnM', el).innerHTML = memHtml(); };
     $('#lnClr', el).onclick = async () => { if (await confirmBox('清空和学姐的全部聊天记录？')) { S.chats = []; save('chats'); toast('已清空聊天记录'); } };
     if ($('#lnMc', el)) $('#lnMc', el).onclick = async () => { if (await confirmBox('清空学姐记得的所有事？')) { S.mems = []; save('mems'); $('#lnM', el).innerHTML = memHtml(); } };
-    $('#lnOk', el).onclick = () => { c.nick = $('#lnN', el).value.trim().slice(0, 12); c.romance = $('#lnR', el).checked; c.tts = $('#lnT', el).checked; c.greet = $('#lnG', el).checked; saveSettings(); closeSheet(); after && after(); };
+    $('#lnOk', el).onclick = () => { c.nick = $('#lnN', el).value.trim().slice(0, 12); c.romance = $('#lnR', el).checked; c.tts = $('#lnT', el).checked; c.greet = $('#lnG', el).checked; c.outfit = $('#lnO', el).value; saveSettings(); closeSheet(); after && after(); };
   });
 }
 /* ---------- 每日问候（每天一次，可关闭） ---------- */
@@ -274,12 +280,22 @@ function linDailyGreet() {
   if (c.greet === false || m.greeted === dayKey() || $('#linG') || location.hash.startsWith('#/chat')) return;
   m.greeted = dayKey(); DB.set('meta', S.meta);
   const g = Lin.greet(); const L = Lin.level();
-  const el = document.createElement('div'); el.className = 'lin-g'; el.id = 'linG';
-  el.innerHTML = `<div class="lin-g-av">${Game.mascot(g.mood, 64)}</div><div class="lin-g-b"><div class="lin-g-n">林遥学姐 <span class="lin-g-lv">${LIN_HEART}${esc(L.name)}</span></div><p>${esc(g.text)}</p><div class="lin-g-a"><a class="btn small" href="#/chat" id="linGo">聊聊</a><button class="btn small plain" id="linX">稍后</button></div></div><button class="lin-g-x" id="linX2" aria-label="关闭">${icon('xmark', 14)}</button>`;
-  document.body.appendChild(el);
+  linPop({ id: 'linG', mood: g.mood, text: g.text, href: '#/chat', go: '聊聊', later: '稍后', tag: `${LIN_HEART}${esc(L.name)}` });
+}
+/** 学姐小横幅（每日问候 / 提醒共用）：只用 esc() 输出 */
+function linPop(o) {
+  const id = o.id || 'linP'; $('#' + id)?.remove();
+  // 一次只显示一个：提醒优先于问候；其他情况排队，等前一个关掉
+  const other = [...document.querySelectorAll('.lin-g')].find(x => x.id !== id);
+  if (other) { if (other.id === 'linG') other.remove(); else { setTimeout(() => linPop(o), 1500); return null; } }
+  const el = document.createElement('div'); el.className = 'lin-g'; el.id = id; el.setAttribute('role', 'status');
+  el.innerHTML = `<div class="lin-g-av">${Game.mascot(o.mood || 'normal', 64)}</div><div class="lin-g-b"><div class="lin-g-n">${o.title ? esc(o.title) : '林遥学姐'}${o.tag ? ` <span class="lin-g-lv">${o.tag}</span>` : ''}</div><p>${esc(o.text)}</p><div class="lin-g-a">${o.go ? (o.href ? `<a class="btn small" href="${esc(o.href)}" id="${id}Go">${esc(o.go)}</a>` : `<button class="btn small" id="${id}Go">${esc(o.go)}</button>`) : ''}${o.later !== false ? `<button class="btn small plain" id="${id}X">${esc(o.later || '知道了')}</button>` : ''}</div></div><button class="lin-g-x" id="${id}X2" aria-label="关闭">${icon('xmark', 14)}</button>`;
+  document.body.appendChild(el); if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(10);
   const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 300); };
-  el.querySelector('#linX').onclick = close; el.querySelector('#linX2').onclick = close; el.querySelector('#linGo').onclick = () => setTimeout(close, 50);
-  setTimeout(() => { if (document.body.contains(el)) close(); }, 15000);
+  el.querySelectorAll(`#${id}X, #${id}X2`).forEach(b => b.onclick = close);
+  const go = el.querySelector(`#${id}Go`); if (go) go.onclick = () => setTimeout(close, 50);
+  setTimeout(() => { if (document.body.contains(el)) close(); }, o.auto || 15000);
+  return el;
 }
 /* 点一下学姐（今日卡片、专注对话框、空状态等）就能开始聊天 */
 document.addEventListener('click', e => {

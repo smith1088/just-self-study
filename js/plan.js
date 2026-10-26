@@ -67,14 +67,13 @@ route('/plan', 'plan', v => {
   }
   const total = S.todos.filter(t => t.due === dayKey()).length, doneToday = S.todos.filter(t => t.due === dayKey() && t.done).length;
   v.innerHTML = `
-    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><b>今日进度</b><div class="small muted">${doneToday} / ${total} 项已完成</div></div><div style="font-size:26px;font-weight:700">${total ? Math.round(doneToday / total * 100) : 0}%</div></div>
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><b>今日进度</b><div class="small muted">${doneToday} / ${total} 项已完成</div></div><div class="num" style="font-size:26px;font-weight:700">${total ? Math.round(doneToday / total * 100) : 0}%</div></div>
     <div class="progress"><i style="width:${total ? doneToday / total * 100 : 0}%"></i></div></div>
-    <div class="seg" id="pf">${[['active', '待完成'], ['done', '已完成'], ['all', '全部']].map(([k, l]) => `<button data-k="${k}" class="${planFilter === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-    <div class="chips" id="ps" style="margin-bottom:12px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px"><button class="chip ${!planSubj ? 'sel' : ''}" data-s="">全部科目</button>${S.settings.subjects.map(s => `<button class="chip ${planSubj === s.id ? 'sel' : ''}" data-s="${s.id}">${esc(s.name)}</button>`).join('')}</div>
+    <div class="pf-row"><div class="seg" id="pf">${[['active', '待完成'], ['done', '已完成'], ['all', '全部']].map(([k, l]) => `<button data-k="${k}" class="${planFilter === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+<select id="ps" class="mini-sel" aria-label="按科目筛选"><option value="">全部科目</option>${S.settings.subjects.map(s => `<option value="${s.id}" ${planSubj === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
     <div id="tl">${groups.filter(g => g[1].length).map(([n, arr]) => `<h3>${n} · ${arr.length}</h3><div class="list">${arr.map(todoRow).join('')}</div>`).join('') || `${emptyState('plan', '还没有计划', '点右上角 ＋ 添加，或在「薄弱点分析」里一键生成本周复习计划。')}`}</div>
-    <button class="fab" id="fab" aria-label="新建计划">＋</button>`;
+    `;
   $('#pf').onclick = e => { const b = e.target.closest('button'); if (b) { planFilter = b.dataset.k; rerender(); } };
-  $('#ps').onclick = e => { const b = e.target.closest('button'); if (b) { planSubj = b.dataset.s; rerender(); } };
-  $('#fab').onclick = () => editTodo();
+  $('#ps').onchange = e => { planSubj = e.target.value; rerender(); };
   bindTodoList($('#tl'));
 });
