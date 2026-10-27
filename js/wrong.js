@@ -60,6 +60,7 @@ route('/learn/wrong/:id', 'learn', (v, id) => {
   setTop('错题详情', { back: '#/learn/wrong', actions: `<button class="icon-btn txt" id="ed">编辑</button>` });
   $('#ed').onclick = () => editWrong(w);
   v.innerHTML = `<div class="chips" style="margin-bottom:10px">${wrongChips(w)}</div><div class="q">${wrongQuestionHtml(w, true)}</div>
+    ${AX.whySlot({ type: w.qtype, stem: w.stem, options: w.options, answer: w.answer, explanation: w.explanation, material: w.material }, w.userAnswer, { status: 'bad' })}${AX.isMath({ stem: w.stem }, w.subject) ? AX.hintSlot({ type: w.qtype, stem: w.stem, options: w.options }) : ''}
     <div class="small muted" style="margin:0 4px 12px">来源：${esc(w.source || '')} · ${fmtDateTime(w.createdAt)}${w.reviewCount ? ` · 已复习 ${w.reviewCount} 次` : ''}</div>
     <label class="f"><span>错因 / 笔记</span><textarea id="wn" style="min-height:90px" placeholder="例如：审题不清、公式记错、概念混淆…">${esc(w.note)}</textarea></label>
     <div class="btns" style="margin-bottom:10px"><button class="btn ${w.mastered ? 'plain' : 'ok'}" id="ms">${w.mastered ? '标记为未掌握' : '✓ 已掌握'}</button><button class="btn ghost" id="sim">${icon('sparkle', 18)} 生成相似题</button></div>

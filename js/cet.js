@@ -127,7 +127,7 @@ route('/learn/cet', 'learn', v => {
       <a class="row" href="#/learn/exam/new?preset=cet4">${iconTile('exam', '#ec4899', 18)}<div class="grow"><div class="t">整套模拟卷</div><div class="s">100 分钟</div></div><span class="chev">›</span></a>
     </div>
     ${ex.length ? `<h3>最近练习</h3><div class="list">${ex.map(e => { const t = examTotals(e); return `<a class="row" href="#/learn/exam/${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="s">${e.status === 'graded' || e.status === 'done' ? `${t.score} / ${t.max} 分` : '未完成'}</div></div><span class="chev">›</span></a>`; }).join('')}</div>` : ''}
-    <p class="small muted cet-note">${AI.ready() ? '' : '未配置 AI 时使用内置示例题。'}考试日期为预估，以学校通知为准；听力暂无音频，可点 🔊 朗读材料练耳朵。</p>`;
+    <p class="small muted cet-note">${AI.ready() ? '' : '未配置 AI 时使用内置示例题。'}考试日期为预估，以学校通知为准；练听力可以用<a href="#/learn/listen">影视精听</a>导入自己的美剧片段，或点 🔊 朗读材料。</p>`;
   $('#cetGo').onclick = async () => { const b = $('#cetGo'); b.disabled = true; try { const d = await Cet.ensureDeck(); location.hash = '#/learn/review/' + d.id; } catch (e) { toast(e.message || '词表加载失败'); b.disabled = false; } };
   $('#cetRead').onclick = () => Cet.practice('read');
   $('#cetCloze').onclick = () => Cet.practice('cloze');

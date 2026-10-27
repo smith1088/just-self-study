@@ -67,6 +67,8 @@ const TTS = {
     });
   },
   _end() { this.speaking = false; if (this._btn) this._btn.classList.remove('on'); this._btn = null; },
+  // iOS 只允许在用户手势里开始朗读：第一次点按时先读一个静音空句“解锁”，之后自动朗读才能出声
+  unlock() { if (!this.ok || this._unl) return; try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); this._unl = 1; } catch (e) { } },
   stop() { if (!this.ok) return; this._id++; try { speechSynthesis.cancel(); } catch (e) { } this._end(); },
   // 点一下读，再点一下停
   toggle(parts, btn) { if (this.speaking && (!btn || this._btn === btn)) { this.stop(); return; } this.speak(parts, { btn }); }

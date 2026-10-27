@@ -191,6 +191,7 @@ route('/learn/bank-do/:id', 'learn', (v, id) => {
       <div class="progress"><i style="width:${(i + 1) / order.length * 100}%"></i></div>
       ${q.material ? `<details class="material zt-mat"${i === 0 || order[i - 1].material !== q.material ? ' open' : ''}><summary class="small muted">阅读材料</summary><div class="md">${md(q.material)}</div></details>` : ''}
       <div class="q card" data-q="${q.id}">${qHead(q, mode === 'seq' ? i : b.questions.indexOf(q))}${stemHtml(q, !graded)}${graded ? resultBody(q, st.a, st.r) : answerInput(q, st.a)}</div>
+      ${graded && graded.status !== 'ok' && graded.status !== 'pending' ? AX.whySlot(q, st.a, graded) : ''}${!graded && AX.isMath(q, b.subject) ? AX.hintSlot(q) : ''}
       ${needBtn ? `<button class="btn block" id="chk" style="min-height:50px">${QT[q.type].objective ? '提交答案' : '查看参考答案并自评'}</button>` : ''}
       <div class="btns" style="margin-top:12px"><button class="btn plain" id="prev" ${i ? '' : 'disabled'}>‹ 上一题</button><button class="btn ${graded ? '' : 'plain'}" id="next">${i + 1 >= order.length ? '完成' : '下一题 ›'}</button></div>`;
     const qe = $('[data-q]', v);

@@ -51,12 +51,12 @@ route('/learn', 'learn', v => {
     ['#/learn/books', 'books', '教材与笔记', `${S.books.length} 本教材 · ${S.notes.length} 篇笔记`, '#10b981']
   ];
   const more = [
-    ['#/learn/tt', 'calendar', '课表', '#5B8DEF'], ['#/learn/solve', 'camera', '拍照搜题', '#8b5cf6'], ['#/learn/banks', 'layers', '题库刷题', '#14b8a6'], ['#/learn/pastpapers', 'doc', '真题练习', '#f59e0b'],
-    ['#/learn/wrong-analysis', 'target', '薄弱点分析', '#ec4899'], ['#/learn/exam-history', 'chart', '成绩记录', '#0ea5e9']
+    ['#/learn/tt', 'calendar', '课表', '#5B8DEF'], ['#/learn/solve', 'camera', '拍照搜题', '#8b5cf6'], ['#/learn/banks', 'layers', '题库刷题', '#14b8a6'], ['#/learn/pastpapers', 'doc', '真题练习', '#f59e0b'], ['#/learn/listen', 'headphones', '影视精听', '#0ea5e9'],
+    ['#/learn/kg', 'graph', '知识图谱', '#22c55e'], ['#/learn/wrong-analysis', 'target', '薄弱点分析', '#ec4899'], ['#/learn/exam-history', 'chart', '成绩记录', '#0ea5e9']
   ];
   v.innerHTML = `<a class="lh-hero" href="#/learn/decks">${iconTile('cards', '#3b82f6', 22)}<div class="grow"><div class="lh-t">背卡片</div><div class="lh-s">${due ? '今天待复习' : '今天都复习完了'}</div></div><span class="lh-n num">${due || ''}</span><span class="chev">›</span></a>
   <div class="grid2 lh-grid">${big.map(([h, i, t, s, c]) => `<a class="tile" href="${h}">${iconTile(i, c)}<div class="tt">${t}</div><div class="ts">${s}</div></a>`).join('')}</div>
-  <details class="lh-more"${Q.get('more') ? ' open' : ''}><summary class="row"><div class="grow"><div class="t">更多工具</div><div class="s">课表、拍照搜题、题库、真题、薄弱点、成绩</div></div><span class="chev">›</span></summary>
+  <details class="lh-more"${Q.get('more') ? ' open' : ''}><summary class="row"><div class="grow"><div class="t">更多工具</div><div class="s">课表、拍照搜题、题库、真题、影视精听等</div></div><span class="chev">›</span></summary>
   <div class="list">${more.map(([h, i, t, c]) => `<a class="row" href="${h}">${iconTile(i, c, 18)}<div class="grow"><div class="t">${t}</div></div><span class="chev">›</span></a>`).join('')}</div></details>`;
 });
 route('/me', 'me', v => {

@@ -34,6 +34,7 @@ const DB = {
   },
   get(k) { return new Promise((res, rej) => { const q = this.db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
   set(k, v) { return new Promise((res, rej) => { const tx = this.db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); },
+  del(k) { return new Promise((res, rej) => { const tx = this.db.transaction('kv', 'readwrite'); tx.objectStore('kv').delete(k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); },
   clear() { return new Promise((res) => { const tx = this.db.transaction('kv', 'readwrite'); tx.objectStore('kv').clear(); tx.oncomplete = () => res(); }); }
 };
 const COLLECTIONS = ['todos', 'notes', 'decks', 'cards', 'reviews', 'sessions', 'books', 'exams', 'wrongs', 'solves', 'banks', 'courses', 'events', 'chats', 'mems'];
@@ -192,7 +193,7 @@ let currentCleanup = null;
 function render() {
   const [h, qs] = (location.hash || '#/today').slice(1).split('?'); window.Q = new URLSearchParams(qs || '');
   if (currentCleanup) { try { currentCleanup(); } catch (e) { } currentCleanup = null; }
-  if (window.TTS) TTS.stop();
+  if (typeof TTS !== 'undefined') TTS.stop();
   closeSheet(true);
   for (const r of Routes) {
     const m = h.match(r.re);

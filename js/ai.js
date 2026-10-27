@@ -37,6 +37,20 @@ const AI = {
     const c = this.cfg(); const bad = this.checkUrl(c.baseUrl); if (bad) throw new AIError(bad + '。请到「我的 → 设置 → AI 与隐私」修改。', 'config');
     let b = c.baseUrl.trim().replace(/\/+$/, ''); if (/\/chat\/completions$/.test(b)) return b; return b + '/chat/completions';
   },
+  /** 语音转文字：录音只发往用户自己配置的服务商的 /audio/transcriptions（OpenAI 兼容），Key 只在 Authorization 头里 */
+  STT: { openai: 'whisper-1', siliconflow: 'FunAudioLLM/SenseVoiceSmall', openrouter: 'openai/whisper-1', custom: 'whisper-1' },
+  async transcribe(blob, { lang = 'zh', signal } = {}) {
+    const c = this.cfg(); if (!this.ready()) throw new AIError('语音识别需要先配置你自己的 AI。', 'config');
+    const model = this.STT[c.preset] || 'whisper-1';
+    const url = this.url().replace(/\/chat\/completions$/, '/audio/transcriptions');
+    const fd = new FormData(); const ext = /mp4|m4a|aac/.test(blob.type) ? 'm4a' : /ogg/.test(blob.type) ? 'ogg' : 'webm';
+    fd.append('file', blob, 'voice.' + ext); fd.append('model', model); fd.append('language', lang === 'en' ? 'en' : 'zh');
+    const ctl = new AbortController(); const to = setTimeout(() => ctl.abort('timeout'), 60000); if (signal) signal.addEventListener('abort', () => ctl.abort('user'));
+    let res; try { res = await fetch(url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + c.apiKey.trim() }, body: fd, signal: ctl.signal, credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store', redirect: 'error', mode: 'cors' }); } catch (e) { clearTimeout(to); throw this.netErr(e, ctl); }
+    clearTimeout(to); const t = await res.text(); let d = null; try { d = JSON.parse(t); } catch (e) { }
+    if (!res.ok) { const e = this.httpErr(res.status, d?.error?.message || d?.message || t.slice(0, 200)); if (res.status === 404 || res.status === 405) e.kind = 'nostt'; throw e; }
+    return String(d?.text ?? (d ? '' : t)).trim().slice(0, 1000);
+  },
   async chat(messages, { json = false, signal, temperature = 0.4, model, maxTokens } = {}) {
     const c = this.cfg(); if (!this.ready()) throw new AIError('还没有配置 AI。请到「我的 → 设置 → AI 与隐私」填写接口地址、API Key 和模型名。', 'config');
     const body = { model: model || c.model, messages, temperature, stream: false };
@@ -77,9 +91,9 @@ const AI = {
     return new AIError((map[status] || `AI 服务返回错误（${status}）`) + (em ? `\n详情：${this.redact(String(typeof em === 'string' ? em : JSON.stringify(em))).slice(0, 300)}` : ''), 'http');
   },
   /** 流式对话（SSE）。onDelta(片段, 累计全文)；服务商不支持流式时自动按普通 JSON 解析 */
-  async stream(messages, { signal, temperature = 0.8, maxTokens, onDelta = () => { } } = {}) {
+  async stream(messages, { signal, temperature = 0.8, maxTokens, model, onDelta = () => { } } = {}) {
     const c = this.cfg(); if (!this.ready()) throw new AIError('还没有配置 AI。请到「我的 → 设置 → AI 与隐私」填写接口地址、API Key 和模型名。', 'config');
-    const body = { model: c.model, messages, temperature, stream: true }; if (maxTokens) body.max_tokens = maxTokens;
+    const body = { model: model || c.model, messages, temperature, stream: true }; if (maxTokens) body.max_tokens = maxTokens;
     const ctl = new AbortController(); let to = setTimeout(() => ctl.abort('timeout'), 90000);
     if (signal) signal.addEventListener('abort', () => ctl.abort('user'));
     let res; try { res = await fetch(this.url(), this.reqOpts(body, ctl.signal)); } catch (e) { clearTimeout(to); throw this.netErr(e, ctl); }
