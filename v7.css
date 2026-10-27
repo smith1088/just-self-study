@@ -665,3 +665,14 @@ details.zt-mat:not([open]) { padding-bottom: 8px; }
 .lc-you .lc-th{display:block;max-width:150px;max-height:150px;border-radius:12px;margin:0 0 6px auto;object-fit:cover}
 .lg-img{display:block;max-width:180px;max-height:180px;border-radius:12px;margin-bottom:6px}.lg-gone{opacity:.7;font-size:12.5px;display:block}
 .lg-spk{flex:none;align-self:center;width:30px;height:30px;border-radius:50%;border:0;background:var(--fill);color:var(--muted);display:grid;place-items:center;padding:0;cursor:pointer}.lg-spk.on{color:#fff;background:var(--vn-tag2,var(--pri))}
+
+/* 语法课 */
+.gm-tip{margin:2px 4px 10px}
+.gm-h{margin:14px 4px 8px;font-size:15px}
+.gm-row{padding:0 10px 0 0}
+.gm-a{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:12px 0 12px 14px;color:inherit;text-decoration:none}
+.gm-n{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;color:#fff;background:#0ea5e9}
+.gm-ck{flex:none;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line);background:none;color:transparent;display:grid;place-items:center;padding:0;cursor:pointer}
+.gm-ck[aria-pressed=true]{background:#30b850;border-color:#30b850;color:#fff}
+.gm-row .t{white-space:normal;line-height:1.35}.gm-row .s{white-space:normal}
+.gm-done .t{color:var(--sub)}.gm-done .gm-n{background:#c7c7cc}

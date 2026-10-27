@@ -1,4 +1,4 @@
-const VERSION = 'v2.1.1';
+const VERSION = 'v2.1.2';
 const CORE = ['./', 'index.html', 'styles.css', 'v5.css', 'v7.css', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'img/bg/focus-dawn.webp', 'img/bg/focus-night.webp',
   'img/mascot/normal.webp', 'img/mascot/normal-face.webp', 'img/mascot/happy.webp', 'img/mascot/happy-face.webp', 'img/mascot/cheer.webp', 'img/mascot/cheer-face.webp', 'img/mascot/encourage.webp', 'img/mascot/encourage-face.webp', 'img/mascot/sleepy.webp', 'img/mascot/sleepy-face.webp', 'img/mascot/shy.webp', 'img/mascot/shy-face.webp', 'img/mascot/pout.webp', 'img/mascot/pout-face.webp', 'img/mascot/gaze.webp', 'img/mascot/gaze-face.webp',
   'img/mascot/night.webp', 'img/mascot/night-face.webp', 'img/mascot/surprised.webp', 'img/mascot/surprised-face.webp', 'img/mascot/wink.webp', 'img/mascot/wink-face.webp', 'img/mascot/hoodie.webp', 'img/mascot/hoodie-face.webp', 'img/mascot/proud.webp', 'img/mascot/proud-face.webp', 'img/story/s2.webp', 'img/story/s3.webp', 'img/story/s4.webp', 'img/story/s5.webp',

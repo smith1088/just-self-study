@@ -187,7 +187,7 @@ route('/learn/listen', 'learn', v => {
   Promise.all([LS.all(), LS.hard()]).then(([clips, hard]) => {
     if (!v.isConnected) return;
     const live = hard.filter(h => !h.done), due = live.filter(LS.isDue).length;
-    const hardRow = live.length ? `<div class="list" style="margin-bottom:12px"><a class="row" href="#/learn/listen-hard" id="lnHard">${iconTile('target', '#f43f5e', 18)}<div class="grow"><div class="t">难句本</div><div class="s">${due ? `<b class="lh-due">${due} 句待复习</b> · ` : ''}共 ${live.length} 句</div></div><span class="chev">›</span></a></div>` : '';
+    const hardRow = `<div class="list" style="margin-bottom:12px">${live.length ? `<a class="row" href="#/learn/listen-hard" id="lnHard">${iconTile('target', '#f43f5e', 18)}<div class="grow"><div class="t">难句本</div><div class="s">${due ? `<b class="lh-due">${due} 句待复习</b> · ` : ''}共 ${live.length} 句</div></div><span class="chev">›</span></a>` : ''}<a class="row" href="#/learn/tvclips">${iconTile('play', '#f59e0b', 18)}<div class="grow"><div class="t">美剧片段</div><div class="s">${TvClips.sub()}</div></div><span class="chev">›</span></a></div>`;
     if (!clips.length) {
       v.innerHTML = hardRow + emptyState('play', '还没有导入片段', '导入自己的美剧、电影或动画片段和英文字幕，一句一句练听力。文件只存在这台设备上。', '<button class="btn" id="lnImp">导入视频 / 音频</button>');
       $('#lnImp', v).onclick = () => LS.importSheet(); return;
@@ -382,4 +382,32 @@ route('/learn/listen-hard', 'learn', v => {
   };
   list().catch(e => { if (!st.dead) v.innerHTML = `<div class="notice err">读取失败：${esc(e.message || '')}</div>`; });
   return () => { st.dead = true; freeMedia(); };
+});
+
+/* 美剧片段：只收版权方官方频道（剧集 / 电视台）上传的免费片段，外链在 Safari 播放，不下载、不转存 */
+const TvClips = {
+  KEY: 'sw-tvclips-seen',
+  easy: [
+    { id: 'c1', t: '老友记：Pivot!（Ross 搬沙发）', n: '1 分钟，台词短，最好入门', p: '老友记官方', u: 'https://www.youtube.com/watch?v=njgfomF51fg' },
+    { id: 'c2', t: '摩登家庭：Lily 的音乐品味', n: '1 分钟，家常对话', p: 'ABC 官方', u: 'https://www.youtube.com/watch?v=MamwBgEH2Es' },
+    { id: 'c3', t: '老友记：Ross 教 Rachel 洗衣服', n: '生活词汇多，发音清楚', p: 'TBS 官方', u: 'https://www.youtube.com/watch?v=Xz2f5qiYzJw' },
+    { id: 'c4', t: '老友记：Rachel 领到第一份工资', n: '工作、钱的日常表达', p: 'TBS 官方', u: 'https://www.youtube.com/watch?v=fg8Cpl5PIRE' },
+    { id: 'c5', t: '小谢尔顿：扮成 Spock 去生日派对', n: '吐字清楚，适合跟读', p: 'TBS 官方', u: 'https://www.youtube.com/watch?v=om1Rg4288B0' },
+    { id: 'c6', t: '小谢尔顿：Sheldon 安慰妈妈', n: '母子谈心，语速慢', p: 'TBS 官方', u: 'https://www.youtube.com/watch?v=Vyb-sTrY_Y8' },
+    { id: 'c7', t: '摩登家庭：给别人育儿建议', n: '2 分钟，口语地道', p: 'ABC 官方', u: 'https://www.youtube.com/watch?v=IBNxaMhzR0A' }
+  ],
+  hard: [
+    { id: 'c8', t: '老友记：Ross 第一次约 Rachel', n: '连读多，练自然语速', p: 'TBS 官方', u: 'https://www.youtube.com/watch?v=7-upy7YksTA' },
+    { id: 'c9', t: 'Brooklyn 99：嫌犯合唱 I Want It That Way', n: '经典名场面', p: 'NBC 官方', u: 'https://www.youtube.com/watch?v=ffyKY3Dj5ZE' },
+    { id: 'c10', t: '生活大爆炸：Sheldon 把 Raj 丢在地下', n: '快速对话', p: '华纳官方', u: 'https://www.youtube.com/watch?v=6m-s1R7_Ttw' },
+    { id: 'c11', t: '生活大爆炸：Raj 不准 Leonard 和 Priya 约会', n: '语速快，适合挑战', p: '华纳官方', u: 'https://www.youtube.com/watch?v=AyrtRTFuIhE' },
+    { id: 'c12', t: 'Brooklyn 99：动作片模式', n: '语速很快，练反应', p: 'NBC 官方', u: 'https://www.youtube.com/watch?v=zoitWKPpwxk' },
+    { id: 'c13', t: 'The Office：Dwight 的演讲', n: '长段独白，练整段理解', p: 'NBC 官方', u: 'https://www.youtube.com/watch?v=LYyZqlyDEL4' }
+  ],
+  all() { return this.easy.concat(this.hard); },
+  sub() { return LinkList.sub(this.KEY, this.all(), '官方片段'); }
+};
+route('/learn/tvclips', 'learn', v => {
+  setTop('美剧片段', { back: '#/learn/listen' });
+  LinkList.render(v, TvClips.KEY, '都来自剧集官方 YouTube 频道，免费观看，需要梯子。点开在 Safari 播放，看完点圆圈标记“看过”。', [{ h: '入门 · 语速慢', items: TvClips.easy }, { h: '进阶 · 语速快', items: TvClips.hard }]);
 });

@@ -125,6 +125,7 @@ route('/learn/cet', 'learn', v => {
       <button class="row" id="cetWT">${iconTile('clock', '#ff9f0a', 18)}<div class="grow"><div class="t">写作 + 翻译</div><div class="s">60 分钟限时</div></div><span class="chev">›</span></button>
       <a class="row" href="#/learn/pastpapers">${iconTile('doc', '#f59e0b', 18)}<div class="grow"><div class="t">四级真题</div><div class="s">导入真题包后练习</div></div><span class="chev">›</span></a>
       <a class="row" href="#/learn/exam/new?preset=cet4">${iconTile('exam', '#ec4899', 18)}<div class="grow"><div class="t">整套模拟卷</div><div class="s">100 分钟</div></div><span class="chev">›</span></a>
+      <a class="row" href="#/learn/grammar">${iconTile('play', '#0ea5e9', 18)}<div class="grow"><div class="t">语法课</div><div class="s">${Grammar.sub()}</div></div><span class="chev">›</span></a>
     </div>
     ${ex.length ? `<h3>最近练习</h3><div class="list">${ex.map(e => { const t = examTotals(e); return `<a class="row" href="#/learn/exam/${e.id}"><div class="grow"><div class="t">${esc(e.title)}</div><div class="s">${e.status === 'graded' || e.status === 'done' ? `${t.score} / ${t.max} 分` : '未完成'}</div></div><span class="chev">›</span></a>`; }).join('')}</div>` : ''}
     <p class="small muted cet-note">${AI.ready() ? '' : '未配置 AI 时使用内置示例题。'}考试日期为预估，以学校通知为准；练听力可以用<a href="#/learn/listen">影视精听</a>导入自己的美剧片段，或点 🔊 朗读材料。</p>`;
@@ -136,6 +137,33 @@ route('/learn/cet', 'learn', v => {
     $('#cdOk', el).onclick = () => { const x = $('#cdI', el).value; if (!/^\d{4}-\d{2}-\d{2}$/.test(x)) return toast('请选择日期'); Cet.cfg().date = x; saveSettings(); closeSheet(); rerender(); };
     $('#cdR', el).onclick = () => { Cet.cfg().date = ''; saveSettings(); closeSheet(); rerender(); };
   });
+});
+/* 外链清单（语法课 / 美剧片段）：只存公开外链，点开在 Safari 播放；“看过”只记在本机 localStorage */
+const LinkList = {
+  seen(key) { try { const a = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(a) ? a.filter(x => typeof x === 'string') : []; } catch { return []; } },
+  toggle(key, id) { const s = new Set(this.seen(key)); s.has(id) ? s.delete(id) : s.add(id); try { localStorage.setItem(key, JSON.stringify([...s])); } catch {} },
+  sub(key, items, unit) { const n = this.seen(key).filter(id => items.some(c => c.id === id)).length; return n ? `已看 ${n} / ${items.length}` : `${items.length} 个${unit}，点开就看`; },
+  render(v, key, tip, groups) {
+    const seen = new Set(this.seen(key)); let n = 0;
+    const row = c => { n++; return `<div class="row gm-row${seen.has(c.id) ? ' gm-done' : ''}"><a class="gm-a" href="${esc(c.u)}" target="_blank" rel="noopener noreferrer"><span class="gm-n num">${n}</span><div class="grow"><div class="t">${esc(c.t)}</div><div class="s">${esc(c.n)} · ${esc(c.p)}</div></div></a><button class="gm-ck" data-id="${esc(c.id)}" aria-pressed="${seen.has(c.id)}" aria-label="标记看过">${icon('check', 16)}</button></div>`; };
+    v.innerHTML = `<p class="small muted gm-tip">${esc(tip)}</p>` + groups.map(g => `${g.h ? `<h3 class="gm-h">${esc(g.h)}</h3>` : ''}<div class="list">${g.items.map(row).join('')}</div>`).join('');
+    v.querySelectorAll('.gm-ck').forEach(b => b.onclick = () => { this.toggle(key, b.dataset.id); const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); b.closest('.gm-row').classList.toggle('gm-done', on); });
+  }
+};
+const Grammar = {
+  KEY: 'sw-grammar-seen',
+  list: [
+    { id: 'g1', t: '英语兔：一个视频说清整个英语语法体系', n: '入门首选，先看这个', p: 'B站', u: 'https://www.bilibili.com/video/BV1r54y1m7gd' },
+    { id: 'g2', t: '英语兔：英语语法精讲合集', n: '按专题逐节讲', p: 'B站', u: 'https://www.bilibili.com/video/BV1XY411J7aG' },
+    { id: 'g3', t: '英语兔：16种时态', n: '专讲时态', p: 'B站', u: 'https://www.bilibili.com/video/BV1Sv411y7d8' },
+    { id: 'g4', t: 'Winter老师：基础语法合集', n: '从零讲起，节奏慢', p: 'B站', u: 'https://space.bilibili.com/1122933332/channel/collectiondetail?sid=421466' },
+    { id: 'g5', t: '英语兔语法体系（YouTube 版）', n: '同第 1 个，需梯子', p: 'YouTube', u: 'https://www.youtube.com/watch?v=is7vn5URVcc' }
+  ],
+  sub() { return LinkList.sub(this.KEY, this.list, '视频课'); }
+};
+route('/learn/grammar', 'learn', v => {
+  setTop('语法课', { back: '#/learn/cet' });
+  LinkList.render(v, Grammar.KEY, '点课程在 Safari 打开，看完点右边圆圈标记“看过”。', [{ items: Grammar.list }]);
 });
 /* 阅读材料朗读（练耳朵）：只朗读英文材料 */
 document.addEventListener('click', e => { const b = e.target.closest('.mat-say'); if (!b) return; const m = b.closest('.material'); const t = m ? [...m.childNodes].filter(n => n !== b && !n.classList?.contains('small')).map(n => n.textContent).join('\n') : ''; if (t) TTS.toggle([{ text: t, lang: 'en' }], b); });
